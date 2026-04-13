@@ -28,7 +28,6 @@ from game_constants import (
     HISTORY_KEY_SELECTED_COUNT,
     HISTORY_LIST_ERROR,
     HISTORY_NEGATIVE_VALUES_ERROR,
-    LEGACY_HISTORY_KEY_QUESTION_COUNT,
     NEXT_QUIZ_ID_MIN_ERROR,
     QUIZZES_LIST_ERROR,
     STATE_DATA_DICT_ERROR,
@@ -178,14 +177,10 @@ class StateStore:
         if not isinstance(entry, dict):
             raise ValueError(HISTORY_ENTRY_DICT_ERROR)
 
+        # 최신 history 스키마의 필수 키가 모두 있어야 정상 기록으로 본다.
         played_at = str(entry[HISTORY_KEY_PLAYED_AT])
-        # 예전 구조의 `question_count`도 읽어, 이전 저장 파일과의 호환성을 유지한다.
-        selected_count = int(
-            entry.get(HISTORY_KEY_SELECTED_COUNT, entry.get(LEGACY_HISTORY_KEY_QUESTION_COUNT, 0))
-        )
-        answered_count = int(
-            entry.get(HISTORY_KEY_ANSWERED_COUNT, entry.get(LEGACY_HISTORY_KEY_QUESTION_COUNT, 0))
-        )
+        selected_count = int(entry[HISTORY_KEY_SELECTED_COUNT])
+        answered_count = int(entry[HISTORY_KEY_ANSWERED_COUNT])
         correct_count = int(entry[HISTORY_KEY_CORRECT_COUNT])
         score = int(entry[HISTORY_KEY_SCORE])
         hint_used_count = int(entry[HISTORY_KEY_HINT_USED_COUNT])

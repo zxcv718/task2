@@ -10,12 +10,10 @@ from __future__ import annotations
 from console_io import InputFn, OutputFn, prompt_int, prompt_text
 from game_constants import (
     ADD_QUIZ_TITLE,
-    ANSWER_LABEL,
     ANSWER_NUMBER_PROMPT,
     CHOICE_PROMPTS,
     DELETE_QUIZ_PROMPT,
     DELETE_QUIZ_TITLE,
-    HINT_LABEL,
     HINT_PROMPT,
     NO_QUIZZES_TO_DELETE_MESSAGE,
     NO_QUIZZES_TO_LIST_MESSAGE,
@@ -23,7 +21,6 @@ from game_constants import (
     QUESTION_PROMPT,
     QUIZ_ADDED_MESSAGE_TEMPLATE,
     QUIZ_DELETED_MESSAGE_TEMPLATE,
-    QUIZ_ID_LABEL,
     QUIZ_ID_NOT_FOUND_MESSAGE,
     QUIZ_LIST_TITLE,
     SECTION_DIVIDER,
@@ -80,10 +77,12 @@ class QuizCatalogManager:
         return next_quiz_id + 1
 
     def list_quizzes(self, quizzes: list[Quiz]) -> None:
-        """현재 등록된 퀴즈를 ID 순서대로 화면에 출력한다.
+        """현재 등록된 퀴즈를 화면용 순서 번호와 함께 출력한다.
 
-        내부 저장 순서가 어떻든, 화면에는 ID 기준 정렬된 결과를 보여 주어
-        사용자가 목록을 예측 가능하게 읽을 수 있도록 한다.
+        내부 저장 순서가 어떻든, 화면에는 ID 기준으로 정렬된 결과를
+        `문제 1`, `문제 2`처럼 읽기 쉬운 번호로 보여 준다. 목록 화면은
+        퀴즈 존재 여부와 문제 구성을 확인하는 용도이므로, 내부 ID와
+        정답 번호, 힌트는 여기서 노출하지 않는다.
         """
         if not quizzes:
             self.output_fn(NO_QUIZZES_TO_LIST_MESSAGE)
@@ -91,14 +90,12 @@ class QuizCatalogManager:
 
         self.output_fn("")
         self.output_fn(QUIZ_LIST_TITLE)
-        for quiz in sorted(quizzes, key=lambda item: item.quiz_id):
+        for display_index, quiz in enumerate(sorted(quizzes, key=lambda item: item.quiz_id), start=1):
             self.output_fn(SECTION_DIVIDER)
-            self.output_fn(f"{QUIZ_ID_LABEL}: {quiz.quiz_id}")
+            self.output_fn(f"문제 {display_index}")
             self.output_fn(f"{QUESTION_LABEL}: {quiz.question}")
             for index, choice in enumerate(quiz.choices, start=1):
                 self.output_fn(f"  {index}. {choice}")
-            self.output_fn(f"{ANSWER_LABEL}: {quiz.answer}")
-            self.output_fn(f"{HINT_LABEL}: {quiz.hint}")
 
     def delete_quiz(self, quizzes: list[Quiz]) -> bool:
         """사용자가 고른 퀴즈 ID를 삭제하고 성공 여부를 반환한다.

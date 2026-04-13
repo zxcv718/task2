@@ -22,14 +22,13 @@ STATE_KEY_BEST_SCORE = "best_score"
 STATE_KEY_QUIZZES = "quizzes"
 STATE_KEY_HISTORY = "history"
 
-# history 항목 키와 예전 저장 형식 호환용 키
+# history 항목 키
 HISTORY_KEY_PLAYED_AT = "played_at"
 HISTORY_KEY_SELECTED_COUNT = "selected_count"
 HISTORY_KEY_ANSWERED_COUNT = "answered_count"
 HISTORY_KEY_CORRECT_COUNT = "correct_count"
 HISTORY_KEY_SCORE = "score"
 HISTORY_KEY_HINT_USED_COUNT = "hint_used_count"
-LEGACY_HISTORY_KEY_QUESTION_COUNT = "question_count"
 
 # 메인 화면과 메뉴 출력 문구
 APP_TITLE = "나만의 퀴즈 게임"
@@ -79,10 +78,7 @@ HINT_PROMPT = "힌트: "
 QUIZ_ADDED_MESSAGE_TEMPLATE = "{quiz_id}번 퀴즈가 추가되었습니다."
 NO_QUIZZES_TO_LIST_MESSAGE = "표시할 퀴즈가 없습니다."
 QUIZ_LIST_TITLE = "저장된 퀴즈 목록"
-QUIZ_ID_LABEL = "ID"
 QUESTION_LABEL = "문제"
-ANSWER_LABEL = "정답 번호"
-HINT_LABEL = "힌트"
 NO_QUIZZES_TO_DELETE_MESSAGE = "삭제할 퀴즈가 없습니다."
 DELETE_QUIZ_TITLE = "삭제할 퀴즈 ID를 선택하세요."
 DELETE_QUIZ_PROMPT = "삭제할 퀴즈 ID: "
