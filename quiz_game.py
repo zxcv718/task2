@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
 from console_io import SafeExitRequest, prompt_int, prompt_text
-from game_constants import BASE_POINTS, HINT_POINTS, RECENT_HISTORY_LIMIT
+from game_constants import BASE_POINTS, HINT_POINTS
 from quiz_catalog import QuizCatalogManager
 from quiz import Quiz
 from quiz_session import QuizSessionRunner, calculate_points
+from scoreboard import record_history, show_scores
 from state_store import GameState, StateStore
 
 
@@ -125,28 +125,7 @@ class QuizGame:
             self.save_state()
 
     def show_scores(self) -> None:
-        self.output_fn("")
-        self.output_fn(f"최고 점수: {self.best_score}")
-        self.output_fn(f"총 플레이 횟수: {len(self.history)}")
-
-        if not self.history:
-            self.output_fn("아직 저장된 플레이 기록이 없습니다.")
-            return
-
-        self.output_fn("최근 5개 기록:")
-        for entry in reversed(self.history[-RECENT_HISTORY_LIMIT:]):
-            self.output_fn(
-                " | ".join(
-                    [
-                        f"플레이 시각: {entry['played_at']}",
-                        f"선택 문제 수: {entry['selected_count']}",
-                        f"푼 문제 수: {entry['answered_count']}",
-                        f"맞힌 문제 수: {entry['correct_count']}",
-                        f"점수: {entry['score']}",
-                        f"힌트 사용 수: {entry['hint_used_count']}",
-                    ]
-                )
-            )
+        show_scores(self.output_fn, best_score=self.best_score, history=self.history)
 
     def prompt_int(
         self,
@@ -185,15 +164,12 @@ class QuizGame:
         total_score: int,
         hint_used_count: int,
     ) -> None:
-        played_at = datetime.now().astimezone().isoformat(timespec="seconds")
-        self.best_score = max(self.best_score, total_score)
-        self.history.append(
-            {
-                "played_at": played_at,
-                "selected_count": selected_count,
-                "answered_count": answered_count,
-                "correct_count": correct_count,
-                "score": total_score,
-                "hint_used_count": hint_used_count,
-            }
+        self.best_score = record_history(
+            self.history,
+            self.best_score,
+            selected_count=selected_count,
+            answered_count=answered_count,
+            correct_count=correct_count,
+            total_score=total_score,
+            hint_used_count=hint_used_count,
         )
