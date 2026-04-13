@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
@@ -8,6 +7,7 @@ from typing import Callable
 from console_io import SafeExitRequest, prompt_int, prompt_text
 from game_constants import BASE_POINTS, HINT_POINTS, RECENT_HISTORY_LIMIT
 from quiz import Quiz
+from quiz_session import QuizSessionRunner, calculate_points
 from state_store import GameState, StateStore
 
 
@@ -22,6 +22,7 @@ class QuizGame:
         self.state_path = self.state_store.state_path
         self.input_fn = input_fn
         self.output_fn = output_fn
+        self.session_runner = QuizSessionRunner(input_fn, output_fn)
         self.quizzes: list[Quiz] = []
         self.best_score = 0
         self.history: list[dict[str, object]] = []
@@ -87,68 +88,27 @@ class QuizGame:
             self.output_fn("현재 등록된 퀴즈가 없습니다.")
             return
 
-        selected_count = self.prompt_int(
-            f"몇 문제를 풀까요? (1-{len(self.quizzes)}): ",
-            minimum=1,
-            maximum=len(self.quizzes),
-        )
-
-        selected_quizzes = random.sample(self.quizzes, selected_count)
-        answered_count = 0
-        correct_count = 0
-        total_score = 0
-        hint_used_count = 0
-
-        self.output_fn("")
-        self.output_fn(f"총 {selected_count}문제를 시작합니다.")
-
-        try:
-            for question_index, quiz in enumerate(selected_quizzes, start=1):
-                self.output_fn("")
-                self.output_fn("-" * 40)
-                self.output_fn(f"문제 {question_index}/{selected_count}")
-                self.output_fn(quiz.display())
-
-                answer, used_hint = self._prompt_answer_for_quiz(quiz)
-                answered_count += 1
-                if used_hint:
-                    hint_used_count += 1
-
-                if quiz.is_correct(answer):
-                    correct_count += 1
-                    points = self.calculate_points(correct=True, hint_used=used_hint)
-                    total_score += points
-                    self.output_fn(f"정답입니다! +{points}점")
-                else:
-                    correct_text = quiz.choices[quiz.answer - 1]
-                    self.output_fn(f"오답입니다. 정답은 {quiz.answer}번, {correct_text}입니다.")
-        except SafeExitRequest:
-            self._record_history(
-                selected_count=selected_count,
-                answered_count=answered_count,
-                correct_count=correct_count,
-                total_score=total_score,
-                hint_used_count=hint_used_count,
-            )
-            self.save_state()
-            self.output_fn("퀴즈 진행이 중단되어 현재까지의 결과를 기록했습니다.")
-            raise
+        result = self.session_runner.play(self.quizzes)
 
         self._record_history(
-            selected_count=selected_count,
-            answered_count=answered_count,
-            correct_count=correct_count,
-            total_score=total_score,
-            hint_used_count=hint_used_count,
+            selected_count=result.selected_count,
+            answered_count=result.answered_count,
+            correct_count=result.correct_count,
+            total_score=result.total_score,
+            hint_used_count=result.hint_used_count,
         )
         self.save_state()
 
+        if result.interrupted:
+            self.output_fn("퀴즈 진행이 중단되어 현재까지의 결과를 기록했습니다.")
+            raise SafeExitRequest
+
         self.output_fn("")
         self.output_fn("퀴즈가 끝났습니다.")
-        self.output_fn(f"선택한 문제 수: {selected_count}")
-        self.output_fn(f"푼 문제 수: {answered_count}")
-        self.output_fn(f"맞힌 문제 수: {correct_count}")
-        self.output_fn(f"점수: {total_score}")
+        self.output_fn(f"선택한 문제 수: {result.selected_count}")
+        self.output_fn(f"푼 문제 수: {result.answered_count}")
+        self.output_fn(f"맞힌 문제 수: {result.correct_count}")
+        self.output_fn(f"점수: {result.total_score}")
         self.output_fn(f"최고 점수: {self.best_score}")
 
     def add_quiz(self) -> None:
@@ -271,9 +231,7 @@ class QuizGame:
             self.output_fn("프로그램을 종료합니다.")
 
     def calculate_points(self, *, correct: bool, hint_used: bool) -> int:
-        if not correct:
-            return 0
-        return HINT_POINTS if hint_used else BASE_POINTS
+        return calculate_points(correct=correct, hint_used=hint_used)
 
     def _record_history(
         self,
@@ -296,30 +254,6 @@ class QuizGame:
                 "hint_used_count": hint_used_count,
             }
         )
-
-    def _prompt_answer_for_quiz(self, quiz: Quiz) -> tuple[int, bool]:
-        hint_used = False
-
-        while True:
-            answer_text = self.prompt_text("정답 입력 (1-4, 힌트는 h): ").lower()
-            if answer_text == "h":
-                if hint_used:
-                    self.output_fn("이 문제에서는 이미 힌트를 사용했습니다.")
-                    continue
-                hint_used = True
-                self.output_fn(f"힌트: {quiz.hint}")
-                continue
-
-            try:
-                answer = int(answer_text)
-            except ValueError:
-                self.output_fn("1, 2, 3, 4 또는 h만 입력해주세요.")
-                continue
-
-            if 1 <= answer <= 4:
-                return answer, hint_used
-
-            self.output_fn("1부터 4까지의 숫자 또는 h를 입력해주세요.")
 
     def _find_quiz(self, quiz_id: int) -> Quiz | None:
         for quiz in self.quizzes:
