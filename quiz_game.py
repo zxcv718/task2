@@ -6,13 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from console_io import SafeExitRequest, prompt_int, prompt_text
 from default_data import build_default_state
 from game_constants import BASE_POINTS, HINT_POINTS, RECENT_HISTORY_LIMIT, STATE_VERSION
 from quiz import Quiz
-
-
-class SafeExitRequest(Exception):
-    pass
 
 
 class QuizGame:
@@ -276,39 +273,16 @@ class QuizGame:
         minimum: int | None = None,
         maximum: int | None = None,
     ) -> int:
-        while True:
-            raw_value = self.prompt_text(prompt)
-            try:
-                value = int(raw_value)
-            except ValueError:
-                self.output_fn("숫자만 입력해주세요.")
-                continue
-
-            if minimum is not None and value < minimum:
-                self.output_fn(f"{minimum}부터 {maximum} 사이의 숫자를 입력해주세요.")
-                continue
-
-            if maximum is not None and value > maximum:
-                self.output_fn(f"{minimum}부터 {maximum} 사이의 숫자를 입력해주세요.")
-                continue
-
-            return value
+        return prompt_int(
+            self.input_fn,
+            self.output_fn,
+            prompt,
+            minimum=minimum,
+            maximum=maximum,
+        )
 
     def prompt_text(self, prompt: str) -> str:
-        while True:
-            try:
-                value = self.input_fn(prompt)
-            except (KeyboardInterrupt, EOFError):
-                self.output_fn("")
-                self.output_fn("입력이 중단되었습니다. 저장 후 안전하게 종료합니다.")
-                raise SafeExitRequest from None
-
-            cleaned_value = value.strip()
-            if not cleaned_value:
-                self.output_fn("빈 입력은 허용되지 않습니다. 다시 입력해주세요.")
-                continue
-
-            return cleaned_value
+        return prompt_text(self.input_fn, self.output_fn, prompt)
 
     def safe_exit(self) -> None:
         saved = self.save_state()
