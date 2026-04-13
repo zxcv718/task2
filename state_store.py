@@ -1,3 +1,9 @@
+"""state.json 로드/저장과 검증을 담당하는 모듈.
+
+파일 입출력과 데이터 구조 검증을 한 곳에 모아 두면, 게임 로직은
+"언제 저장할지"에만 집중할 수 있고 저장 포맷 변경도 관리하기 쉬워진다.
+"""
+
 from __future__ import annotations
 
 import json
@@ -40,6 +46,8 @@ from quiz import Quiz
 
 @dataclass(slots=True)
 class GameState:
+    """메모리 위에서 다루는 게임 상태 묶음."""
+
     quizzes: list[Quiz]
     best_score: int
     history: list[dict[str, object]]
@@ -47,11 +55,18 @@ class GameState:
 
 
 class StateStore:
+    """`state.json`을 읽고 쓰는 저장소 객체."""
+
     def __init__(self, state_path: str | Path, output_fn: OutputFn) -> None:
         self.state_path = Path(state_path)
         self.output_fn = output_fn
 
     def load_state(self) -> GameState:
+        """저장 파일을 읽어 `GameState`로 복원한다.
+
+        파일이 없거나 손상된 경우에도 프로그램이 시작 가능해야 하므로,
+        기본 상태로 복구하는 흐름을 함께 제공한다.
+        """
         if not self.state_path.exists():
             self.output_fn(STATE_FILE_MISSING_MESSAGE)
             state = self._parse_state(build_default_state())
@@ -63,12 +78,14 @@ class StateStore:
                 raw_state = json.load(file)
             return self._parse_state(raw_state)
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+            # 파일이 깨졌더라도 프로그램 전체가 멈추지 않도록 기본 상태로 복구한다.
             self.output_fn(STATE_FILE_RECOVERY_MESSAGE_TEMPLATE.format(error=error))
             state = self._parse_state(build_default_state())
             self.save_state(state)
             return state
 
     def save_state(self, state: GameState) -> bool:
+        """현재 메모리 상태를 JSON 파일에 저장하고 성공 여부를 반환한다."""
         data = {
             STATE_KEY_VERSION: STATE_VERSION,
             STATE_KEY_NEXT_QUIZ_ID: state.next_quiz_id,
@@ -89,6 +106,7 @@ class StateStore:
         return True
 
     def _parse_state(self, data: dict[str, object]) -> GameState:
+        """읽어 온 payload를 검증하고 `GameState`로 변환한다."""
         if not isinstance(data, dict):
             raise ValueError(STATE_DATA_DICT_ERROR)
 
@@ -118,14 +136,17 @@ class StateStore:
             quizzes=quizzes,
             best_score=best_score,
             history=history,
+            # 저장 파일의 next_quiz_id가 잘못되어도 기존 최대 ID보다 작아지지 않게 보정한다.
             next_quiz_id=max(next_quiz_id, highest_quiz_id + 1),
         )
 
     def _validate_history_entry(self, entry: dict[str, object]) -> dict[str, object]:
+        """history 항목 1개의 형식과 값 범위를 검사한다."""
         if not isinstance(entry, dict):
             raise ValueError(HISTORY_ENTRY_DICT_ERROR)
 
         played_at = str(entry[HISTORY_KEY_PLAYED_AT])
+        # 예전 구조의 `question_count`도 읽어, 이전 저장 파일과의 호환성을 유지한다.
         selected_count = int(
             entry.get(HISTORY_KEY_SELECTED_COUNT, entry.get(LEGACY_HISTORY_KEY_QUESTION_COUNT, 0))
         )

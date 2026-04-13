@@ -1,3 +1,11 @@
+"""게임 전반에서 공유하는 상수 모음.
+
+이 파일은 단순한 숫자 상수뿐 아니라, 사용자에게 보여 주는 메시지와
+`state.json`의 키 이름까지 함께 모아 둔다. 이렇게 해 두면 문자열 오타를
+줄일 수 있고, 문구 변경이 필요할 때 수정 위치도 명확해진다.
+"""
+
+# 저장 파일 경로와 기본 수치 상수
 DEFAULT_STATE_PATH = "state.json"
 
 STATE_VERSION = 1
@@ -5,12 +13,14 @@ BASE_POINTS = 10
 HINT_POINTS = 7
 RECENT_HISTORY_LIMIT = 5
 
+# state.json 최상위 키
 STATE_KEY_VERSION = "version"
 STATE_KEY_NEXT_QUIZ_ID = "next_quiz_id"
 STATE_KEY_BEST_SCORE = "best_score"
 STATE_KEY_QUIZZES = "quizzes"
 STATE_KEY_HISTORY = "history"
 
+# history 항목 키와 이전 버전 호환 키
 HISTORY_KEY_PLAYED_AT = "played_at"
 HISTORY_KEY_SELECTED_COUNT = "selected_count"
 HISTORY_KEY_ANSWERED_COUNT = "answered_count"
@@ -19,6 +29,7 @@ HISTORY_KEY_SCORE = "score"
 HISTORY_KEY_HINT_USED_COUNT = "hint_used_count"
 LEGACY_HISTORY_KEY_QUESTION_COUNT = "question_count"
 
+# 메인 화면과 메뉴 출력 문구
 APP_TITLE = "나만의 퀴즈 게임"
 APP_STATE_NOTICE = "진행 상황은 state.json에 저장됩니다."
 MENU_PROMPT = "메뉴 번호를 선택하세요: "
@@ -33,6 +44,7 @@ MENU_OPTIONS = (
     "6. 종료",
 )
 
+# 게임 종료/결과 요약 문구
 NO_REGISTERED_QUIZZES_MESSAGE = "현재 등록된 퀴즈가 없습니다."
 QUIZ_INTERRUPTED_RECORDED_MESSAGE = "퀴즈 진행이 중단되어 현재까지의 결과를 기록했습니다."
 QUIZ_FINISHED_MESSAGE = "퀴즈가 끝났습니다."
@@ -45,11 +57,13 @@ SUMMARY_CORRECT_COUNT_LABEL = "맞힌 문제 수"
 SUMMARY_SCORE_LABEL = "점수"
 SUMMARY_BEST_SCORE_LABEL = "최고 점수"
 
+# 공통 입력 처리 문구
 INPUT_INTERRUPTED_MESSAGE = "입력이 중단되었습니다. 저장 후 안전하게 종료합니다."
 EMPTY_INPUT_MESSAGE = "빈 입력은 허용되지 않습니다. 다시 입력해주세요."
 NUMBERS_ONLY_MESSAGE = "숫자만 입력해주세요."
 RANGE_MESSAGE_TEMPLATE = "{minimum}부터 {maximum} 사이의 숫자를 입력해주세요."
 
+# 퀴즈 추가/목록/삭제 관련 문구
 ADD_QUIZ_TITLE = "새 퀴즈 추가"
 QUESTION_PROMPT = "문제: "
 CHOICE_PROMPTS = (
@@ -73,6 +87,7 @@ DELETE_QUIZ_PROMPT = "삭제할 퀴즈 ID: "
 QUIZ_ID_NOT_FOUND_MESSAGE = "해당 ID의 퀴즈가 없습니다. 다시 입력하세요."
 QUIZ_DELETED_MESSAGE_TEMPLATE = "{quiz_id}번 퀴즈를 삭제했습니다."
 
+# 퀴즈 플레이 진행 관련 문구
 QUESTION_COUNT_PROMPT_TEMPLATE = "몇 문제를 풀까요? (1-{quiz_count}): "
 QUIZ_START_MESSAGE_TEMPLATE = "총 {selected_count}문제를 시작합니다."
 QUESTION_PROGRESS_TEMPLATE = "문제 {question_index}/{selected_count}"
@@ -85,6 +100,7 @@ HINT_MESSAGE_TEMPLATE = "힌트: {hint}"
 ANSWER_OR_HINT_ONLY_MESSAGE = "1, 2, 3, 4 또는 h만 입력해주세요."
 ANSWER_RANGE_OR_HINT_MESSAGE = "1부터 4까지의 숫자 또는 h를 입력해주세요."
 
+# 점수판 및 히스토리 표시 라벨
 PLAY_COUNT_LABEL = "총 플레이 횟수"
 NO_PLAY_HISTORY_MESSAGE = "아직 저장된 플레이 기록이 없습니다."
 RECENT_HISTORY_TITLE = "최근 5개 기록:"
@@ -95,10 +111,12 @@ CORRECT_COUNT_LABEL = "맞힌 문제 수"
 SCORE_LABEL = "점수"
 HINT_USED_COUNT_LABEL = "힌트 사용 수"
 
+# state 파일 로드/저장 관련 안내 메시지
 STATE_FILE_MISSING_MESSAGE = "state.json 파일이 없어 기본 퀴즈로 새로 생성합니다."
 STATE_FILE_RECOVERY_MESSAGE_TEMPLATE = "state.json을 불러오지 못했습니다 ({error}). 기본 데이터로 복구합니다."
 STATE_SAVE_FAILED_MESSAGE_TEMPLATE = "state.json 저장에 실패했습니다: {error}"
 
+# state 검증 실패 시 사용하는 오류 메시지
 STATE_DATA_DICT_ERROR = "state 데이터는 딕셔너리여야 합니다."
 UNSUPPORTED_STATE_VERSION_ERROR_TEMPLATE = "지원하지 않는 state 버전입니다: {version}"
 BEST_SCORE_NEGATIVE_ERROR = "best_score는 음수일 수 없습니다."

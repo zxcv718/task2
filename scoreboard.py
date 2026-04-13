@@ -1,3 +1,9 @@
+"""최고 점수와 플레이 히스토리 처리에 관한 모듈.
+
+이 파일은 "점수판"과 관련된 책임만 모아 둔 곳이다. 퀴즈를 풀 때 생성되는
+history 기록 형식과, 그 기록을 화면에 어떻게 보여 줄지 함께 관리한다.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -34,6 +40,7 @@ def record_history(
     total_score: int,
     hint_used_count: int,
 ) -> int:
+    """현재 플레이 결과를 history에 추가하고 갱신된 최고 점수를 반환한다."""
     played_at = datetime.now().astimezone().isoformat(timespec="seconds")
     history.append(
         {
@@ -45,6 +52,7 @@ def record_history(
             "hint_used_count": hint_used_count,
         }
     )
+    # 최고 점수는 기존 값과 이번 점수 중 큰 값을 유지한다.
     return max(best_score, total_score)
 
 
@@ -54,6 +62,7 @@ def show_scores(
     best_score: int,
     history: list[dict[str, object]],
 ) -> None:
+    """최고 점수와 최근 플레이 기록을 화면에 출력한다."""
     output_fn("")
     output_fn(f"{SUMMARY_BEST_SCORE_LABEL}: {best_score}")
     output_fn(f"{PLAY_COUNT_LABEL}: {len(history)}")
@@ -63,6 +72,7 @@ def show_scores(
         return
 
     output_fn(RECENT_HISTORY_TITLE)
+    # 최근 기록이 아래쪽에 쌓이므로, 화면에는 뒤에서부터 역순으로 보여 준다.
     for entry in reversed(history[-RECENT_HISTORY_LIMIT:]):
         output_fn(
             " | ".join(

@@ -1,3 +1,9 @@
+"""기본 퀴즈 데이터와 초기 state 생성을 담당하는 모듈.
+
+프로그램을 처음 실행하거나 `state.json`이 손상되었을 때 복구 기준점으로
+사용되는 데이터가 이 파일에 들어 있다.
+"""
+
 from __future__ import annotations
 
 from game_constants import (
@@ -11,6 +17,8 @@ from game_constants import (
 from quiz import Quiz
 
 
+# 프로젝트 기본 제공 문제집.
+# 사용자가 저장 파일 없이 시작해도 바로 게임을 해 볼 수 있도록 최소 문제 세트를 제공한다.
 DEFAULT_QUIZ_DATA: list[dict[str, object]] = [
     {
         "id": 1,
@@ -72,10 +80,16 @@ DEFAULT_QUIZ_DATA: list[dict[str, object]] = [
 
 
 def get_default_quizzes() -> list[Quiz]:
+    """기본 퀴즈 payload를 `Quiz` 객체 목록으로 변환한다."""
     return [Quiz.from_dict(item) for item in DEFAULT_QUIZ_DATA]
 
 
 def build_default_state() -> dict[str, object]:
+    """첫 실행에 사용할 기본 상태 딕셔너리를 만든다.
+
+    저장 구조의 키 이름은 `game_constants.py`에서 가져와, 코드 전체에서
+    같은 이름을 일관되게 사용하도록 한다.
+    """
     quizzes = get_default_quizzes()
     return {
         STATE_KEY_VERSION: STATE_VERSION,

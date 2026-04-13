@@ -1,3 +1,9 @@
+"""퀴즈 플레이 세션을 담당하는 모듈.
+
+문제 수 선택, 랜덤 출제, 힌트 처리, 채점, 중단 시 부분 결과 계산까지
+"한 번의 플레이"에 필요한 세부 흐름을 이 파일에서 관리한다.
+"""
+
 from __future__ import annotations
 
 import random
@@ -26,6 +32,8 @@ from quiz import Quiz
 
 @dataclass(slots=True)
 class QuizSessionResult:
+    """퀴즈 세션이 끝난 뒤 상위 레이어로 넘길 결과 묶음."""
+
     selected_count: int
     answered_count: int
     correct_count: int
@@ -35,12 +43,15 @@ class QuizSessionResult:
 
 
 def calculate_points(*, correct: bool, hint_used: bool) -> int:
+    """정답 여부와 힌트 사용 여부를 바탕으로 획득 점수를 계산한다."""
     if not correct:
         return 0
     return HINT_POINTS if hint_used else BASE_POINTS
 
 
 class QuizSessionRunner:
+    """퀴즈 풀이 한 판의 진행을 담당하는 실행기."""
+
     def __init__(
         self,
         input_fn: InputFn,
@@ -50,9 +61,11 @@ class QuizSessionRunner:
     ) -> None:
         self.input_fn = input_fn
         self.output_fn = output_fn
+        # 테스트에서는 랜덤 대신 고정 순서를 주입할 수 있도록 함수 의존성을 분리한다.
         self.sample_fn = sample_fn or random.sample
 
     def play(self, quizzes: list[Quiz]) -> QuizSessionResult:
+        """주어진 퀴즈 목록으로 실제 플레이를 진행하고 결과를 반환한다."""
         selected_count = prompt_int(
             self.input_fn,
             self.output_fn,
@@ -101,6 +114,8 @@ class QuizSessionRunner:
                         )
                     )
         except SafeExitRequest:
+            # 세션 중간에 종료되더라도, 여기까지 누적한 결과를 상위 레이어가
+            # history에 남길 수 있도록 "부분 결과"를 반환한다.
             return QuizSessionResult(
                 selected_count=selected_count,
                 answered_count=answered_count,
@@ -119,6 +134,7 @@ class QuizSessionRunner:
         )
 
     def _prompt_answer_for_quiz(self, quiz: Quiz) -> tuple[int, bool]:
+        """한 문제에 대한 최종 답안과 힌트 사용 여부를 돌려준다."""
         hint_used = False
 
         while True:
@@ -132,6 +148,7 @@ class QuizSessionRunner:
                     self.output_fn(HINT_ALREADY_USED_MESSAGE)
                     continue
                 hint_used = True
+                # 힌트는 정답 공개가 아니라 보조 설명만 제공하도록 설계했다.
                 self.output_fn(HINT_MESSAGE_TEMPLATE.format(hint=quiz.hint))
                 continue
 
