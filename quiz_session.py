@@ -1,7 +1,9 @@
 """퀴즈 플레이 세션을 담당하는 모듈.
 
 문제 수 선택, 랜덤 출제, 힌트 처리, 채점, 중단 시 부분 결과 계산까지
-"한 번의 플레이"에 필요한 세부 흐름을 이 파일에서 관리한다.
+"한 번의 플레이"에 필요한 세부 흐름을 이 파일에서 관리한다. 메뉴 처리나
+저장 시점 판단과 분리해 두었기 때문에, 이 파일은 순수하게 "한 판을 어떻게
+진행할 것인가"에 집중한다.
 """
 
 from __future__ import annotations
@@ -32,7 +34,11 @@ from quiz import Quiz
 
 @dataclass(slots=True)
 class QuizSessionResult:
-    """퀴즈 세션이 끝난 뒤 상위 레이어로 넘길 결과 묶음."""
+    """퀴즈 세션이 끝난 뒤 상위 레이어로 넘길 결과 묶음.
+
+    세션 내부에서 계산한 점수와 통계를 하나로 묶어 반환하면, 상위 객체는
+    이 값을 받아 history 기록과 저장만 처리하면 된다.
+    """
 
     selected_count: int
     answered_count: int
@@ -43,14 +49,22 @@ class QuizSessionResult:
 
 
 def calculate_points(*, correct: bool, hint_used: bool) -> int:
-    """정답 여부와 힌트 사용 여부를 바탕으로 획득 점수를 계산한다."""
+    """정답 여부와 힌트 사용 여부를 바탕으로 획득 점수를 계산한다.
+
+    점수 규칙을 함수로 분리해 두면, 채점 정책이 바뀌더라도 세션 루프 전체를
+    건드리지 않고 계산 기준만 수정할 수 있다.
+    """
     if not correct:
         return 0
     return HINT_POINTS if hint_used else BASE_POINTS
 
 
 class QuizSessionRunner:
-    """퀴즈 풀이 한 판의 진행을 담당하는 실행기."""
+    """퀴즈 풀이 한 판의 진행을 담당하는 실행기.
+
+    이 객체는 문제 수 선택부터 문제별 답안 입력, 채점, 중단 감지까지 한 번의
+    플레이 수명주기를 관리한다.
+    """
 
     def __init__(
         self,
@@ -65,7 +79,11 @@ class QuizSessionRunner:
         self.sample_fn = sample_fn or random.sample
 
     def play(self, quizzes: list[Quiz]) -> QuizSessionResult:
-        """주어진 퀴즈 목록으로 실제 플레이를 진행하고 결과를 반환한다."""
+        """주어진 퀴즈 목록으로 실제 플레이를 진행하고 결과를 반환한다.
+
+        반환값에는 최종 점수뿐 아니라 몇 문제를 골랐고 실제로 몇 문제를
+        답했는지까지 포함된다. 그래야 중간 종료 시에도 부분 결과를 저장할 수 있다.
+        """
         selected_count = prompt_int(
             self.input_fn,
             self.output_fn,
@@ -74,6 +92,8 @@ class QuizSessionRunner:
             maximum=len(quizzes),
         )
 
+        # 한 번의 플레이에서 사용할 문제 집합을 먼저 확정해 두면, 이후 통계
+        # (선택한 문제 수, 진행 순서)가 일관되게 유지된다.
         selected_quizzes = self.sample_fn(quizzes, selected_count)
         answered_count = 0
         correct_count = 0
@@ -93,9 +113,12 @@ class QuizSessionRunner:
                         selected_count=selected_count,
                     )
                 )
+                # 문제 출력 형식은 Quiz 객체가 책임지고, 세션은 그 문자열을 보여 주기만 한다.
                 self.output_fn(quiz.display())
 
                 answer, used_hint = self._prompt_answer_for_quiz(quiz)
+                # 최종적으로 유효한 답안이 확정된 뒤에만 answered_count를 올린다.
+                # 잘못된 입력이나 힌트 요청은 "아직 답한 것"으로 보지 않는다.
                 answered_count += 1
                 if used_hint:
                     hint_used_count += 1
@@ -106,6 +129,7 @@ class QuizSessionRunner:
                     total_score += points
                     self.output_fn(CORRECT_ANSWER_MESSAGE_TEMPLATE.format(points=points))
                 else:
+                    # 정답 번호뿐 아니라 정답 텍스트도 함께 보여 주면 피드백이 더 명확해진다.
                     correct_text = quiz.choices[quiz.answer - 1]
                     self.output_fn(
                         WRONG_ANSWER_MESSAGE_TEMPLATE.format(
@@ -134,7 +158,11 @@ class QuizSessionRunner:
         )
 
     def _prompt_answer_for_quiz(self, quiz: Quiz) -> tuple[int, bool]:
-        """한 문제에 대한 최종 답안과 힌트 사용 여부를 돌려준다."""
+        """한 문제에 대한 최종 답안과 힌트 사용 여부를 돌려준다.
+
+        이 함수는 하나의 문제 안에서 발생하는 반복 입력을 책임진다. 즉 힌트를
+        보여 줄지, 잘못된 입력을 다시 받을지, 최종 정답 번호를 확정할지를 여기서 결정한다.
+        """
         hint_used = False
 
         while True:
@@ -155,10 +183,12 @@ class QuizSessionRunner:
             try:
                 answer = int(answer_text)
             except ValueError:
+                # 숫자 1~4 또는 힌트 명령만 허용하므로, 그 외 문자열은 다시 입력받는다.
                 self.output_fn(ANSWER_OR_HINT_ONLY_MESSAGE)
                 continue
 
             if 1 <= answer <= 4:
                 return answer, hint_used
 
+            # 숫자 형태여도 허용 범위를 벗어나면 별도 안내 후 재입력받는다.
             self.output_fn(ANSWER_RANGE_OR_HINT_MESSAGE)

@@ -1,7 +1,8 @@
 """기본 퀴즈 데이터와 초기 state 생성을 담당하는 모듈.
 
 프로그램을 처음 실행하거나 `state.json`이 손상되었을 때 복구 기준점으로
-사용되는 데이터가 이 파일에 들어 있다.
+사용되는 데이터가 이 파일에 들어 있다. 즉 이 파일은 "아무 저장 정보도
+없을 때 프로그램이 어디에서 출발할 것인가"를 정의하는 기준점이다.
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ from quiz import Quiz
 
 # 프로젝트 기본 제공 문제집.
 # 사용자가 저장 파일 없이 시작해도 바로 게임을 해 볼 수 있도록 최소 문제 세트를 제공한다.
+# 딕셔너리 형태로 두는 이유는, 이후 `Quiz.from_dict()`를 거치며 저장 파일과
+# 동일한 복원 경로를 재사용하기 위해서다.
 DEFAULT_QUIZ_DATA: list[dict[str, object]] = [
     {
         "id": 1,
@@ -80,7 +83,11 @@ DEFAULT_QUIZ_DATA: list[dict[str, object]] = [
 
 
 def get_default_quizzes() -> list[Quiz]:
-    """기본 퀴즈 payload를 `Quiz` 객체 목록으로 변환한다."""
+    """기본 퀴즈 payload를 `Quiz` 객체 목록으로 변환한다.
+
+    기본 데이터라고 해서 예외 없이 신뢰하지 않고, 실제 저장 파일을 읽을 때와
+    같은 방식으로 `Quiz.from_dict()` 검증을 거쳐 객체를 만든다.
+    """
     return [Quiz.from_dict(item) for item in DEFAULT_QUIZ_DATA]
 
 
@@ -91,6 +98,8 @@ def build_default_state() -> dict[str, object]:
     같은 이름을 일관되게 사용하도록 한다.
     """
     quizzes = get_default_quizzes()
+    # `next_quiz_id`는 현재 존재하는 가장 큰 ID 다음 값이어야 하므로,
+    # 기본 문제 수에 1을 더한 값으로 시작한다.
     return {
         STATE_KEY_VERSION: STATE_VERSION,
         STATE_KEY_NEXT_QUIZ_ID: len(quizzes) + 1,

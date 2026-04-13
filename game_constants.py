@@ -2,12 +2,14 @@
 
 이 파일은 단순한 숫자 상수뿐 아니라, 사용자에게 보여 주는 메시지와
 `state.json`의 키 이름까지 함께 모아 둔다. 이렇게 해 두면 문자열 오타를
-줄일 수 있고, 문구 변경이 필요할 때 수정 위치도 명확해진다.
+줄일 수 있고, 문구 변경이 필요할 때 수정 위치도 명확해진다. 특히 저장 파일의
+키 이름을 상수화해 두면, 로드/저장/표시 코드가 같은 이름을 안정적으로 공유할 수 있다.
 """
 
 # 저장 파일 경로와 기본 수치 상수
 DEFAULT_STATE_PATH = "state.json"
 
+# `STATE_VERSION`은 state.json의 저장 구조가 현재 코드와 맞는지 확인할 때 쓴다.
 STATE_VERSION = 1
 BASE_POINTS = 10
 HINT_POINTS = 7
@@ -20,7 +22,7 @@ STATE_KEY_BEST_SCORE = "best_score"
 STATE_KEY_QUIZZES = "quizzes"
 STATE_KEY_HISTORY = "history"
 
-# history 항목 키와 이전 버전 호환 키
+# history 항목 키와 예전 저장 형식 호환용 키
 HISTORY_KEY_PLAYED_AT = "played_at"
 HISTORY_KEY_SELECTED_COUNT = "selected_count"
 HISTORY_KEY_ANSWERED_COUNT = "answered_count"
