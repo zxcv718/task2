@@ -6,6 +6,7 @@ from typing import Callable
 
 from console_io import SafeExitRequest, prompt_int, prompt_text
 from game_constants import BASE_POINTS, HINT_POINTS, RECENT_HISTORY_LIMIT
+from quiz_catalog import QuizCatalogManager
 from quiz import Quiz
 from quiz_session import QuizSessionRunner, calculate_points
 from state_store import GameState, StateStore
@@ -22,6 +23,7 @@ class QuizGame:
         self.state_path = self.state_store.state_path
         self.input_fn = input_fn
         self.output_fn = output_fn
+        self.catalog = QuizCatalogManager(input_fn, output_fn)
         self.session_runner = QuizSessionRunner(input_fn, output_fn)
         self.quizzes: list[Quiz] = []
         self.best_score = 0
@@ -112,74 +114,15 @@ class QuizGame:
         self.output_fn(f"최고 점수: {self.best_score}")
 
     def add_quiz(self) -> None:
-        self.output_fn("")
-        self.output_fn("새 퀴즈 추가")
-
-        question = self.prompt_text("문제: ")
-        choices = [
-            self.prompt_text("선택지 1: "),
-            self.prompt_text("선택지 2: "),
-            self.prompt_text("선택지 3: "),
-            self.prompt_text("선택지 4: "),
-        ]
-        answer = self.prompt_int("정답 번호를 입력하세요 (1-4): ", minimum=1, maximum=4)
-        hint = self.prompt_text("힌트: ")
-
-        quiz = Quiz(
-            quiz_id=self.next_quiz_id,
-            question=question,
-            choices=choices,
-            answer=answer,
-            hint=hint,
-        )
-        self.quizzes.append(quiz)
-        self.next_quiz_id += 1
+        self.next_quiz_id = self.catalog.add_quiz(self.quizzes, self.next_quiz_id)
         self.save_state()
-
-        self.output_fn(f"{quiz.quiz_id}번 퀴즈가 추가되었습니다.")
 
     def list_quizzes(self) -> None:
-        if not self.quizzes:
-            self.output_fn("표시할 퀴즈가 없습니다.")
-            return
-
-        self.output_fn("")
-        self.output_fn("저장된 퀴즈 목록")
-        for quiz in sorted(self.quizzes, key=lambda item: item.quiz_id):
-            self.output_fn("-" * 40)
-            self.output_fn(f"ID: {quiz.quiz_id}")
-            self.output_fn(f"문제: {quiz.question}")
-            for index, choice in enumerate(quiz.choices, start=1):
-                self.output_fn(f"  {index}. {choice}")
-            self.output_fn(f"정답 번호: {quiz.answer}")
-            self.output_fn(f"힌트: {quiz.hint}")
+        self.catalog.list_quizzes(self.quizzes)
 
     def delete_quiz(self) -> None:
-        if not self.quizzes:
-            self.output_fn("삭제할 퀴즈가 없습니다.")
-            return
-
-        self.output_fn("")
-        self.output_fn("삭제할 퀴즈 ID를 선택하세요.")
-        for quiz in sorted(self.quizzes, key=lambda item: item.quiz_id):
-            self.output_fn(f"{quiz.quiz_id}. {quiz.question}")
-
-        max_quiz_id = max(quiz.quiz_id for quiz in self.quizzes)
-        while True:
-            quiz_id = self.prompt_int(
-                "삭제할 퀴즈 ID: ",
-                minimum=1,
-                maximum=max_quiz_id,
-            )
-            target = self._find_quiz(quiz_id)
-            if target is None:
-                self.output_fn("해당 ID의 퀴즈가 없습니다. 다시 입력하세요.")
-                continue
-            break
-
-        self.quizzes = [quiz for quiz in self.quizzes if quiz.quiz_id != quiz_id]
-        self.save_state()
-        self.output_fn(f"{quiz_id}번 퀴즈를 삭제했습니다.")
+        if self.catalog.delete_quiz(self.quizzes):
+            self.save_state()
 
     def show_scores(self) -> None:
         self.output_fn("")
@@ -254,9 +197,3 @@ class QuizGame:
                 "hint_used_count": hint_used_count,
             }
         )
-
-    def _find_quiz(self, quiz_id: int) -> Quiz | None:
-        for quiz in self.quizzes:
-            if quiz.quiz_id == quiz_id:
-                return quiz
-        return None
