@@ -1,0 +1,445 @@
+from __future__ import annotations
+
+import json
+import random
+from datetime import datetime
+from pathlib import Path
+from typing import Callable
+
+from default_data import build_default_state
+from quiz import Quiz
+
+STATE_VERSION = 1
+BASE_POINTS = 10
+HINT_POINTS = 7
+RECENT_HISTORY_LIMIT = 5
+
+
+class SafeExitRequest(Exception):
+    pass
+
+
+class QuizGame:
+    def __init__(
+        self,
+        state_path: str | Path = "state.json",
+        input_fn: Callable[[str], str] = input,
+        output_fn: Callable[[str], None] = print,
+    ) -> None:
+        self.state_path = Path(state_path)
+        self.input_fn = input_fn
+        self.output_fn = output_fn
+        self.quizzes: list[Quiz] = []
+        self.best_score = 0
+        self.history: list[dict[str, object]] = []
+        self.next_quiz_id = 1
+        self.load_state()
+
+    def run(self) -> None:
+        self.output_fn("나만의 퀴즈 게임")
+        self.output_fn("진행 상황은 state.json에 저장됩니다.")
+
+        while True:
+            try:
+                self.show_menu()
+                choice = self.prompt_int("메뉴 번호를 선택하세요: ", minimum=1, maximum=6)
+
+                if choice == 1:
+                    self.play_quiz()
+                elif choice == 2:
+                    self.add_quiz()
+                elif choice == 3:
+                    self.list_quizzes()
+                elif choice == 4:
+                    self.delete_quiz()
+                elif choice == 5:
+                    self.show_scores()
+                else:
+                    self.safe_exit()
+                    return
+            except SafeExitRequest:
+                self.safe_exit()
+                return
+
+    def show_menu(self) -> None:
+        self.output_fn("")
+        self.output_fn("=" * 40)
+        self.output_fn("1. 퀴즈 풀기")
+        self.output_fn("2. 퀴즈 추가")
+        self.output_fn("3. 퀴즈 목록")
+        self.output_fn("4. 퀴즈 삭제")
+        self.output_fn("5. 점수 확인")
+        self.output_fn("6. 종료")
+        self.output_fn("=" * 40)
+
+    def load_state(self) -> None:
+        if not self.state_path.exists():
+            self.output_fn("state.json 파일이 없어 기본 퀴즈로 새로 생성합니다.")
+            self._apply_state(build_default_state())
+            self.save_state()
+            return
+
+        try:
+            with self.state_path.open("r", encoding="utf-8") as file:
+                raw_state = json.load(file)
+            self._apply_state(raw_state)
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+            self.output_fn(
+                f"state.json을 불러오지 못했습니다 ({error}). 기본 데이터로 복구합니다."
+            )
+            self._apply_state(build_default_state())
+            self.save_state()
+
+    def save_state(self) -> bool:
+        data = {
+            "version": STATE_VERSION,
+            "next_quiz_id": self.next_quiz_id,
+            "best_score": self.best_score,
+            "quizzes": [quiz.to_dict() for quiz in self.quizzes],
+            "history": list(self.history),
+        }
+
+        try:
+            self.state_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.state_path.open("w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=2)
+                file.write("\n")
+        except OSError as error:
+            self.output_fn(f"state.json 저장에 실패했습니다: {error}")
+            return False
+
+        return True
+
+    def play_quiz(self) -> None:
+        if not self.quizzes:
+            self.output_fn("현재 등록된 퀴즈가 없습니다.")
+            return
+
+        selected_count = self.prompt_int(
+            f"몇 문제를 풀까요? (1-{len(self.quizzes)}): ",
+            minimum=1,
+            maximum=len(self.quizzes),
+        )
+
+        selected_quizzes = random.sample(self.quizzes, selected_count)
+        answered_count = 0
+        correct_count = 0
+        total_score = 0
+        hint_used_count = 0
+
+        self.output_fn("")
+        self.output_fn(f"총 {selected_count}문제를 시작합니다.")
+
+        try:
+            for question_index, quiz in enumerate(selected_quizzes, start=1):
+                self.output_fn("")
+                self.output_fn("-" * 40)
+                self.output_fn(f"문제 {question_index}/{selected_count}")
+                self.output_fn(quiz.display())
+
+                answer, used_hint = self._prompt_answer_for_quiz(quiz)
+                answered_count += 1
+                if used_hint:
+                    hint_used_count += 1
+
+                if quiz.is_correct(answer):
+                    correct_count += 1
+                    points = self.calculate_points(correct=True, hint_used=used_hint)
+                    total_score += points
+                    self.output_fn(f"정답입니다! +{points}점")
+                else:
+                    correct_text = quiz.choices[quiz.answer - 1]
+                    self.output_fn(f"오답입니다. 정답은 {quiz.answer}번, {correct_text}입니다.")
+        except SafeExitRequest:
+            self._record_history(
+                selected_count=selected_count,
+                answered_count=answered_count,
+                correct_count=correct_count,
+                total_score=total_score,
+                hint_used_count=hint_used_count,
+            )
+            self.save_state()
+            self.output_fn("퀴즈 진행이 중단되어 현재까지의 결과를 기록했습니다.")
+            raise
+
+        self._record_history(
+            selected_count=selected_count,
+            answered_count=answered_count,
+            correct_count=correct_count,
+            total_score=total_score,
+            hint_used_count=hint_used_count,
+        )
+        self.save_state()
+
+        self.output_fn("")
+        self.output_fn("퀴즈가 끝났습니다.")
+        self.output_fn(f"선택한 문제 수: {selected_count}")
+        self.output_fn(f"푼 문제 수: {answered_count}")
+        self.output_fn(f"맞힌 문제 수: {correct_count}")
+        self.output_fn(f"점수: {total_score}")
+        self.output_fn(f"최고 점수: {self.best_score}")
+
+    def add_quiz(self) -> None:
+        self.output_fn("")
+        self.output_fn("새 퀴즈 추가")
+
+        question = self.prompt_text("문제: ")
+        choices = [
+            self.prompt_text("선택지 1: "),
+            self.prompt_text("선택지 2: "),
+            self.prompt_text("선택지 3: "),
+            self.prompt_text("선택지 4: "),
+        ]
+        answer = self.prompt_int("정답 번호를 입력하세요 (1-4): ", minimum=1, maximum=4)
+        hint = self.prompt_text("힌트: ")
+
+        quiz = Quiz(
+            quiz_id=self.next_quiz_id,
+            question=question,
+            choices=choices,
+            answer=answer,
+            hint=hint,
+        )
+        self.quizzes.append(quiz)
+        self.next_quiz_id += 1
+        self.save_state()
+
+        self.output_fn(f"{quiz.quiz_id}번 퀴즈가 추가되었습니다.")
+
+    def list_quizzes(self) -> None:
+        if not self.quizzes:
+            self.output_fn("표시할 퀴즈가 없습니다.")
+            return
+
+        self.output_fn("")
+        self.output_fn("저장된 퀴즈 목록")
+        for quiz in sorted(self.quizzes, key=lambda item: item.quiz_id):
+            self.output_fn("-" * 40)
+            self.output_fn(f"ID: {quiz.quiz_id}")
+            self.output_fn(f"문제: {quiz.question}")
+            for index, choice in enumerate(quiz.choices, start=1):
+                self.output_fn(f"  {index}. {choice}")
+            self.output_fn(f"정답 번호: {quiz.answer}")
+            self.output_fn(f"힌트: {quiz.hint}")
+
+    def delete_quiz(self) -> None:
+        if not self.quizzes:
+            self.output_fn("삭제할 퀴즈가 없습니다.")
+            return
+
+        self.output_fn("")
+        self.output_fn("삭제할 퀴즈 ID를 선택하세요.")
+        for quiz in sorted(self.quizzes, key=lambda item: item.quiz_id):
+            self.output_fn(f"{quiz.quiz_id}. {quiz.question}")
+
+        max_quiz_id = max(quiz.quiz_id for quiz in self.quizzes)
+        while True:
+            quiz_id = self.prompt_int(
+                "삭제할 퀴즈 ID: ",
+                minimum=1,
+                maximum=max_quiz_id,
+            )
+            target = self._find_quiz(quiz_id)
+            if target is None:
+                self.output_fn("해당 ID의 퀴즈가 없습니다. 다시 입력하세요.")
+                continue
+            break
+
+        self.quizzes = [quiz for quiz in self.quizzes if quiz.quiz_id != quiz_id]
+        self.save_state()
+        self.output_fn(f"{quiz_id}번 퀴즈를 삭제했습니다.")
+
+    def show_scores(self) -> None:
+        self.output_fn("")
+        self.output_fn(f"최고 점수: {self.best_score}")
+        self.output_fn(f"총 플레이 횟수: {len(self.history)}")
+
+        if not self.history:
+            self.output_fn("아직 저장된 플레이 기록이 없습니다.")
+            return
+
+        self.output_fn("최근 5개 기록:")
+        for entry in reversed(self.history[-RECENT_HISTORY_LIMIT:]):
+            self.output_fn(
+                " | ".join(
+                    [
+                        f"플레이 시각: {entry['played_at']}",
+                        f"선택 문제 수: {entry['selected_count']}",
+                        f"푼 문제 수: {entry['answered_count']}",
+                        f"맞힌 문제 수: {entry['correct_count']}",
+                        f"점수: {entry['score']}",
+                        f"힌트 사용 수: {entry['hint_used_count']}",
+                    ]
+                )
+            )
+
+    def prompt_int(
+        self,
+        prompt: str,
+        *,
+        minimum: int | None = None,
+        maximum: int | None = None,
+    ) -> int:
+        while True:
+            raw_value = self.prompt_text(prompt)
+            try:
+                value = int(raw_value)
+            except ValueError:
+                self.output_fn("숫자만 입력해주세요.")
+                continue
+
+            if minimum is not None and value < minimum:
+                self.output_fn(f"{minimum}부터 {maximum} 사이의 숫자를 입력해주세요.")
+                continue
+
+            if maximum is not None and value > maximum:
+                self.output_fn(f"{minimum}부터 {maximum} 사이의 숫자를 입력해주세요.")
+                continue
+
+            return value
+
+    def prompt_text(self, prompt: str) -> str:
+        while True:
+            try:
+                value = self.input_fn(prompt)
+            except (KeyboardInterrupt, EOFError):
+                self.output_fn("")
+                self.output_fn("입력이 중단되었습니다. 저장 후 안전하게 종료합니다.")
+                raise SafeExitRequest from None
+
+            cleaned_value = value.strip()
+            if not cleaned_value:
+                self.output_fn("빈 입력은 허용되지 않습니다. 다시 입력해주세요.")
+                continue
+
+            return cleaned_value
+
+    def safe_exit(self) -> None:
+        saved = self.save_state()
+        if saved:
+            self.output_fn("진행 상황을 저장하고 종료합니다.")
+        else:
+            self.output_fn("프로그램을 종료합니다.")
+
+    def calculate_points(self, *, correct: bool, hint_used: bool) -> int:
+        if not correct:
+            return 0
+        return HINT_POINTS if hint_used else BASE_POINTS
+
+    def _record_history(
+        self,
+        *,
+        selected_count: int,
+        answered_count: int,
+        correct_count: int,
+        total_score: int,
+        hint_used_count: int,
+    ) -> None:
+        played_at = datetime.now().astimezone().isoformat(timespec="seconds")
+        self.best_score = max(self.best_score, total_score)
+        self.history.append(
+            {
+                "played_at": played_at,
+                "selected_count": selected_count,
+                "answered_count": answered_count,
+                "correct_count": correct_count,
+                "score": total_score,
+                "hint_used_count": hint_used_count,
+            }
+        )
+
+    def _apply_state(self, data: dict[str, object]) -> None:
+        if not isinstance(data, dict):
+            raise ValueError("state 데이터는 딕셔너리여야 합니다.")
+
+        version = int(data["version"])
+        if version != STATE_VERSION:
+            raise ValueError(f"지원하지 않는 state 버전입니다: {version}")
+
+        quizzes_raw = data["quizzes"]
+        best_score = int(data["best_score"])
+        history_raw = data["history"]
+        next_quiz_id = int(data["next_quiz_id"])
+
+        if best_score < 0:
+            raise ValueError("best_score는 음수일 수 없습니다.")
+        if next_quiz_id < 1:
+            raise ValueError("next_quiz_id는 1 이상이어야 합니다.")
+        if not isinstance(quizzes_raw, list):
+            raise ValueError("quizzes는 리스트여야 합니다.")
+        if not isinstance(history_raw, list):
+            raise ValueError("history는 리스트여야 합니다.")
+
+        quizzes = [Quiz.from_dict(item) for item in quizzes_raw]
+        history = [self._validate_history_entry(item) for item in history_raw]
+        highest_quiz_id = max((quiz.quiz_id for quiz in quizzes), default=0)
+
+        self.quizzes = quizzes
+        self.best_score = best_score
+        self.history = history
+        self.next_quiz_id = max(next_quiz_id, highest_quiz_id + 1)
+
+    def _validate_history_entry(self, entry: dict[str, object]) -> dict[str, object]:
+        if not isinstance(entry, dict):
+            raise ValueError("각 history 항목은 딕셔너리여야 합니다.")
+
+        played_at = str(entry["played_at"])
+        selected_count = int(entry.get("selected_count", entry.get("question_count", 0)))
+        answered_count = int(entry.get("answered_count", entry.get("question_count", 0)))
+        correct_count = int(entry["correct_count"])
+        score = int(entry["score"])
+        hint_used_count = int(entry["hint_used_count"])
+
+        if (
+            selected_count < 0
+            or answered_count < 0
+            or correct_count < 0
+            or score < 0
+            or hint_used_count < 0
+        ):
+            raise ValueError("history 값은 음수일 수 없습니다.")
+        if answered_count > selected_count:
+            raise ValueError("answered_count는 selected_count보다 클 수 없습니다.")
+        if correct_count > answered_count:
+            raise ValueError("correct_count는 answered_count보다 클 수 없습니다.")
+        if hint_used_count > answered_count:
+            raise ValueError("hint_used_count는 answered_count보다 클 수 없습니다.")
+
+        return {
+            "played_at": played_at,
+            "selected_count": selected_count,
+            "answered_count": answered_count,
+            "correct_count": correct_count,
+            "score": score,
+            "hint_used_count": hint_used_count,
+        }
+
+    def _prompt_answer_for_quiz(self, quiz: Quiz) -> tuple[int, bool]:
+        hint_used = False
+
+        while True:
+            answer_text = self.prompt_text("정답 입력 (1-4, 힌트는 h): ").lower()
+            if answer_text == "h":
+                if hint_used:
+                    self.output_fn("이 문제에서는 이미 힌트를 사용했습니다.")
+                    continue
+                hint_used = True
+                self.output_fn(f"힌트: {quiz.hint}")
+                continue
+
+            try:
+                answer = int(answer_text)
+            except ValueError:
+                self.output_fn("1, 2, 3, 4 또는 h만 입력해주세요.")
+                continue
+
+            if 1 <= answer <= 4:
+                return answer, hint_used
+
+            self.output_fn("1부터 4까지의 숫자 또는 h를 입력해주세요.")
+
+    def _find_quiz(self, quiz_id: int) -> Quiz | None:
+        for quiz in self.quizzes:
+            if quiz.quiz_id == quiz_id:
+                return quiz
+        return None
