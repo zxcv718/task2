@@ -17,7 +17,6 @@ from game_constants import (
     HINT_PROMPT,
     NO_QUIZZES_TO_DELETE_MESSAGE,
     NO_QUIZZES_TO_LIST_MESSAGE,
-    QUESTION_LABEL,
     QUESTION_PROMPT,
     QUIZ_ADDED_MESSAGE_TEMPLATE,
     QUIZ_DELETED_MESSAGE_TEMPLATE,
@@ -80,7 +79,7 @@ class QuizCatalogManager:
         """현재 등록된 퀴즈를 화면용 순서 번호와 함께 출력한다.
 
         내부 저장 순서가 어떻든, 화면에는 ID 기준으로 정렬된 결과를
-        `문제 1`, `문제 2`처럼 읽기 쉬운 번호로 보여 준다. 목록 화면은
+        `문제 1: 질문 내용`처럼 읽기 쉬운 형식으로 보여 준다. 목록 화면은
         퀴즈 존재 여부와 문제 구성을 확인하는 용도이므로, 내부 ID와
         정답 번호, 힌트는 여기서 노출하지 않는다.
         """
@@ -92,8 +91,7 @@ class QuizCatalogManager:
         self.output_fn(QUIZ_LIST_TITLE)
         for display_index, quiz in enumerate(sorted(quizzes, key=lambda item: item.quiz_id), start=1):
             self.output_fn(SECTION_DIVIDER)
-            self.output_fn(f"문제 {display_index}")
-            self.output_fn(f"{QUESTION_LABEL}: {quiz.question}")
+            self.output_fn(f"문제 {display_index}: {quiz.question}")
             for index, choice in enumerate(quiz.choices, start=1):
                 self.output_fn(f"  {index}. {choice}")
 
