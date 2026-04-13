@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from pathlib import Path
 from typing import Callable
 
@@ -90,6 +91,7 @@ class QuizGame:
             self.output_fn("현재 등록된 퀴즈가 없습니다.")
             return
 
+        self.session_runner.sample_fn = random.sample
         result = self.session_runner.play(self.quizzes)
 
         self._record_history(
