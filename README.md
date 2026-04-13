@@ -42,12 +42,6 @@
 python3.12 main.py
 ```
 
-### 테스트 실행
-
-```bash
-python3.12 -m unittest discover
-```
-
 ---
 
 ## 4. 평가표 기준 기능 정리
@@ -84,7 +78,7 @@ python3.12 -m unittest discover
 
 ### 4-3. 입력 검증
 
-입력 검증은 `prompt_text()`, `prompt_int()`, `_prompt_answer_for_quiz()`에서 처리합니다.
+입력 검증은 `console_io.py`와 `quiz_session.py`에서 처리합니다.
 
 현재 처리되는 입력 예외는 다음과 같습니다.
 
@@ -155,8 +149,7 @@ python3.12 -m unittest discover
 
 ### `main.py`
 
-프로그램 시작점입니다.  
-`QuizGame` 객체를 만들고 `run()`을 호출합니다.
+프로그램 시작점입니다. `QuizGame` 객체를 만들고 `run()`을 호출합니다.
 
 ### `quiz.py`
 
@@ -172,37 +165,64 @@ python3.12 -m unittest discover
 
 ### `quiz_game.py`
 
-게임 전체 흐름을 관리하는 `QuizGame` 클래스를 정의합니다.
+게임 전체 흐름을 조율하는 `QuizGame` 클래스를 정의합니다.
 
 담당 역할:
 
 - 메뉴 출력
-- 입력 검증
-- 퀴즈 진행
-- 점수 계산
-- 퀴즈 추가/목록/삭제
-- 최고 점수와 히스토리 관리
-- `state.json` 저장 및 복구
+- 메뉴별 기능 분기
+- 상태 저장 타이밍 결정
+- 세션/카탈로그/저장소 모듈 연결
 - 안전 종료 처리
+
+### `console_io.py`
+
+콘솔 입력과 공통 입력 검증, 안전 종료 예외를 담당합니다.
+
+담당 역할:
+
+- `prompt_text()`
+- `prompt_int()`
+- `SafeExitRequest`
+
+### `state_store.py`
+
+`state.json` 읽기/쓰기와 상태 검증을 담당합니다.
+
+담당 역할:
+
+- 파일 없음 처리
+- 손상된 JSON 복구
+- 상태 스키마 검증
+- 퀴즈/히스토리 복원
+
+### `quiz_session.py`
+
+퀴즈 플레이 세션을 담당합니다.
+
+담당 역할:
+
+- 문제 수 선택
+- 랜덤 출제
+- 정답 입력과 힌트 처리
+- 점수 계산
+- 중단 시 부분 결과 반환
+
+### `quiz_catalog.py`
+
+퀴즈 추가, 목록, 삭제를 담당합니다.
+
+### `scoreboard.py`
+
+최고 점수와 히스토리 기록, 점수판 출력을 담당합니다.
+
+### `game_constants.py`
+
+점수, state 버전, 최근 기록 개수 같은 공통 상수를 관리합니다.
 
 ### `default_data.py`
 
 기본 퀴즈 데이터와 기본 상태 생성 함수를 제공합니다.
-
-### `tests/test_quiz_game.py`
-
-현재 구현을 검증하는 `unittest` 테스트가 들어 있습니다.
-
-검증 항목 예시:
-
-- `Quiz.is_correct()`
-- 직렬화/역직렬화
-- 손상된 `state.json` 복구
-- 이전 히스토리 형식 호환
-- 잘못된 답 입력 후 정상 기록
-- 입력 중단 시 부분 히스토리 저장
-
----
 
 ## 6. state.json 데이터 파일 설명
 
@@ -225,7 +245,7 @@ python3.12 -m unittest discover
 
 ### 읽기 흐름
 
-프로그램 시작 시 `QuizGame.__init__()`에서 `load_state()`를 호출합니다.
+프로그램 시작 시 `QuizGame.__init__()`가 `StateStore`를 통해 상태를 불러옵니다.
 
 - 파일이 있으면 JSON을 읽어 메모리에 반영합니다.
 - 파일이 없으면 기본 퀴즈 데이터로 새 파일을 만듭니다.
@@ -277,27 +297,28 @@ python3.12 -m unittest discover
 ## 7. 파일 구조
 
 ```text
-.
+. 
 |-- README.md
+|-- console_io.py
 |-- default_data.py
+|-- game_constants.py
 |-- main.py
-|-- mission2.txt
 |-- quiz.py
+|-- quiz_catalog.py
 |-- quiz_game.py
-|-- state.json
-|-- 평가표.md
-`-- tests/
-    `-- test_quiz_game.py
+|-- quiz_session.py
+|-- scoreboard.py
+|-- state_store.py
+`-- state.json  (실행 시 생성)
 ```
 
 ---
 
 ## 8. Git 및 제출 관련 메모
 
-현재 로컬 저장소 기준으로는 아직 첫 커밋 전 상태입니다.  
-즉 원격 URL은 연결되어 있지만, 의미 있는 커밋 10개 이상, 브랜치 병합 기록, clone/pull 실습 흔적은 아직 Git 로그로 증빙되는 상태가 아닙니다.
+이 저장소는 기능 단위 커밋과 파일 단위 리팩터링을 기준으로 정리하는 것을 목표로 합니다.
 
-평가 제출 전에는 아래 항목을 별도로 준비해야 합니다.
+정리 기준은 다음과 같습니다.
 
 - 기능 단위 커밋
 - 브랜치 생성과 병합 기록
