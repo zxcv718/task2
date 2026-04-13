@@ -5,7 +5,26 @@ from pathlib import Path
 from typing import Callable
 
 from console_io import SafeExitRequest, prompt_int, prompt_text
-from game_constants import BASE_POINTS, HINT_POINTS
+from game_constants import (
+    APP_STATE_NOTICE,
+    APP_TITLE,
+    BASE_POINTS,
+    DEFAULT_STATE_PATH,
+    EXIT_MESSAGE,
+    HINT_POINTS,
+    MENU_DIVIDER,
+    MENU_OPTIONS,
+    MENU_PROMPT,
+    NO_REGISTERED_QUIZZES_MESSAGE,
+    QUIZ_FINISHED_MESSAGE,
+    QUIZ_INTERRUPTED_RECORDED_MESSAGE,
+    SAVE_AND_EXIT_MESSAGE,
+    SUMMARY_ANSWERED_COUNT_LABEL,
+    SUMMARY_BEST_SCORE_LABEL,
+    SUMMARY_CORRECT_COUNT_LABEL,
+    SUMMARY_SCORE_LABEL,
+    SUMMARY_SELECTED_COUNT_LABEL,
+)
 from quiz_catalog import QuizCatalogManager
 from quiz import Quiz
 from quiz_session import QuizSessionRunner, calculate_points
@@ -16,7 +35,7 @@ from state_store import GameState, StateStore
 class QuizGame:
     def __init__(
         self,
-        state_path: str | Path = "state.json",
+        state_path: str | Path = DEFAULT_STATE_PATH,
         input_fn: Callable[[str], str] = input,
         output_fn: Callable[[str], None] = print,
     ) -> None:
@@ -33,13 +52,13 @@ class QuizGame:
         self.load_state()
 
     def run(self) -> None:
-        self.output_fn("나만의 퀴즈 게임")
-        self.output_fn("진행 상황은 state.json에 저장됩니다.")
+        self.output_fn(APP_TITLE)
+        self.output_fn(APP_STATE_NOTICE)
 
         while True:
             try:
                 self.show_menu()
-                choice = self.prompt_int("메뉴 번호를 선택하세요: ", minimum=1, maximum=6)
+                choice = self.prompt_int(MENU_PROMPT, minimum=1, maximum=6)
 
                 if choice == 1:
                     self.play_quiz()
@@ -60,14 +79,10 @@ class QuizGame:
 
     def show_menu(self) -> None:
         self.output_fn("")
-        self.output_fn("=" * 40)
-        self.output_fn("1. 퀴즈 풀기")
-        self.output_fn("2. 퀴즈 추가")
-        self.output_fn("3. 퀴즈 목록")
-        self.output_fn("4. 퀴즈 삭제")
-        self.output_fn("5. 점수 확인")
-        self.output_fn("6. 종료")
-        self.output_fn("=" * 40)
+        self.output_fn(MENU_DIVIDER)
+        for option in MENU_OPTIONS:
+            self.output_fn(option)
+        self.output_fn(MENU_DIVIDER)
 
     def load_state(self) -> None:
         state = self.state_store.load_state()
@@ -88,7 +103,7 @@ class QuizGame:
 
     def play_quiz(self) -> None:
         if not self.quizzes:
-            self.output_fn("현재 등록된 퀴즈가 없습니다.")
+            self.output_fn(NO_REGISTERED_QUIZZES_MESSAGE)
             return
 
         self.session_runner.sample_fn = random.sample
@@ -104,16 +119,16 @@ class QuizGame:
         self.save_state()
 
         if result.interrupted:
-            self.output_fn("퀴즈 진행이 중단되어 현재까지의 결과를 기록했습니다.")
+            self.output_fn(QUIZ_INTERRUPTED_RECORDED_MESSAGE)
             raise SafeExitRequest
 
         self.output_fn("")
-        self.output_fn("퀴즈가 끝났습니다.")
-        self.output_fn(f"선택한 문제 수: {result.selected_count}")
-        self.output_fn(f"푼 문제 수: {result.answered_count}")
-        self.output_fn(f"맞힌 문제 수: {result.correct_count}")
-        self.output_fn(f"점수: {result.total_score}")
-        self.output_fn(f"최고 점수: {self.best_score}")
+        self.output_fn(QUIZ_FINISHED_MESSAGE)
+        self.output_fn(f"{SUMMARY_SELECTED_COUNT_LABEL}: {result.selected_count}")
+        self.output_fn(f"{SUMMARY_ANSWERED_COUNT_LABEL}: {result.answered_count}")
+        self.output_fn(f"{SUMMARY_CORRECT_COUNT_LABEL}: {result.correct_count}")
+        self.output_fn(f"{SUMMARY_SCORE_LABEL}: {result.total_score}")
+        self.output_fn(f"{SUMMARY_BEST_SCORE_LABEL}: {self.best_score}")
 
     def add_quiz(self) -> None:
         self.next_quiz_id = self.catalog.add_quiz(self.quizzes, self.next_quiz_id)
@@ -150,9 +165,9 @@ class QuizGame:
     def safe_exit(self) -> None:
         saved = self.save_state()
         if saved:
-            self.output_fn("진행 상황을 저장하고 종료합니다.")
+            self.output_fn(SAVE_AND_EXIT_MESSAGE)
         else:
-            self.output_fn("프로그램을 종료합니다.")
+            self.output_fn(EXIT_MESSAGE)
 
     def calculate_points(self, *, correct: bool, hint_used: bool) -> int:
         return calculate_points(correct=correct, hint_used=hint_used)

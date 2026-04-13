@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+from game_constants import (
+    STATE_KEY_BEST_SCORE,
+    STATE_KEY_HISTORY,
+    STATE_KEY_NEXT_QUIZ_ID,
+    STATE_KEY_QUIZZES,
+    STATE_KEY_VERSION,
+    STATE_VERSION,
+)
 from quiz import Quiz
 
 
@@ -70,9 +78,9 @@ def get_default_quizzes() -> list[Quiz]:
 def build_default_state() -> dict[str, object]:
     quizzes = get_default_quizzes()
     return {
-        "version": 1,
-        "next_quiz_id": len(quizzes) + 1,
-        "best_score": 0,
-        "quizzes": [quiz.to_dict() for quiz in quizzes],
-        "history": [],
+        STATE_KEY_VERSION: STATE_VERSION,
+        STATE_KEY_NEXT_QUIZ_ID: len(quizzes) + 1,
+        STATE_KEY_BEST_SCORE: 0,
+        STATE_KEY_QUIZZES: [quiz.to_dict() for quiz in quizzes],
+        STATE_KEY_HISTORY: [],
     }

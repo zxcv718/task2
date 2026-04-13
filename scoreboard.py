@@ -3,7 +3,25 @@ from __future__ import annotations
 from datetime import datetime
 
 from console_io import OutputFn
-from game_constants import RECENT_HISTORY_LIMIT
+from game_constants import (
+    ANSWERED_COUNT_LABEL,
+    CORRECT_COUNT_LABEL,
+    HISTORY_KEY_ANSWERED_COUNT,
+    HISTORY_KEY_CORRECT_COUNT,
+    HISTORY_KEY_HINT_USED_COUNT,
+    HISTORY_KEY_PLAYED_AT,
+    HISTORY_KEY_SCORE,
+    HISTORY_KEY_SELECTED_COUNT,
+    HINT_USED_COUNT_LABEL,
+    NO_PLAY_HISTORY_MESSAGE,
+    PLAY_COUNT_LABEL,
+    PLAYED_AT_LABEL,
+    RECENT_HISTORY_LIMIT,
+    RECENT_HISTORY_TITLE,
+    SCORE_LABEL,
+    SELECTED_COUNT_LABEL,
+    SUMMARY_BEST_SCORE_LABEL,
+)
 
 
 def record_history(
@@ -37,24 +55,24 @@ def show_scores(
     history: list[dict[str, object]],
 ) -> None:
     output_fn("")
-    output_fn(f"최고 점수: {best_score}")
-    output_fn(f"총 플레이 횟수: {len(history)}")
+    output_fn(f"{SUMMARY_BEST_SCORE_LABEL}: {best_score}")
+    output_fn(f"{PLAY_COUNT_LABEL}: {len(history)}")
 
     if not history:
-        output_fn("아직 저장된 플레이 기록이 없습니다.")
+        output_fn(NO_PLAY_HISTORY_MESSAGE)
         return
 
-    output_fn("최근 5개 기록:")
+    output_fn(RECENT_HISTORY_TITLE)
     for entry in reversed(history[-RECENT_HISTORY_LIMIT:]):
         output_fn(
             " | ".join(
                 [
-                    f"플레이 시각: {entry['played_at']}",
-                    f"선택 문제 수: {entry['selected_count']}",
-                    f"푼 문제 수: {entry['answered_count']}",
-                    f"맞힌 문제 수: {entry['correct_count']}",
-                    f"점수: {entry['score']}",
-                    f"힌트 사용 수: {entry['hint_used_count']}",
+                    f"{PLAYED_AT_LABEL}: {entry[HISTORY_KEY_PLAYED_AT]}",
+                    f"{SELECTED_COUNT_LABEL}: {entry[HISTORY_KEY_SELECTED_COUNT]}",
+                    f"{ANSWERED_COUNT_LABEL}: {entry[HISTORY_KEY_ANSWERED_COUNT]}",
+                    f"{CORRECT_COUNT_LABEL}: {entry[HISTORY_KEY_CORRECT_COUNT]}",
+                    f"{SCORE_LABEL}: {entry[HISTORY_KEY_SCORE]}",
+                    f"{HINT_USED_COUNT_LABEL}: {entry[HISTORY_KEY_HINT_USED_COUNT]}",
                 ]
             )
         )

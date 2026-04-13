@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from typing import Callable
 
+from game_constants import (
+    EMPTY_INPUT_MESSAGE,
+    INPUT_INTERRUPTED_MESSAGE,
+    NUMBERS_ONLY_MESSAGE,
+    RANGE_MESSAGE_TEMPLATE,
+)
+
 InputFn = Callable[[str], str]
 OutputFn = Callable[[str], None]
 
@@ -16,12 +23,12 @@ def prompt_text(input_fn: InputFn, output_fn: OutputFn, prompt: str) -> str:
             value = input_fn(prompt)
         except (KeyboardInterrupt, EOFError):
             output_fn("")
-            output_fn("입력이 중단되었습니다. 저장 후 안전하게 종료합니다.")
+            output_fn(INPUT_INTERRUPTED_MESSAGE)
             raise SafeExitRequest from None
 
         cleaned_value = value.strip()
         if not cleaned_value:
-            output_fn("빈 입력은 허용되지 않습니다. 다시 입력해주세요.")
+            output_fn(EMPTY_INPUT_MESSAGE)
             continue
 
         return cleaned_value
@@ -40,15 +47,15 @@ def prompt_int(
         try:
             value = int(raw_value)
         except ValueError:
-            output_fn("숫자만 입력해주세요.")
+            output_fn(NUMBERS_ONLY_MESSAGE)
             continue
 
         if minimum is not None and value < minimum:
-            output_fn(f"{minimum}부터 {maximum} 사이의 숫자를 입력해주세요.")
+            output_fn(RANGE_MESSAGE_TEMPLATE.format(minimum=minimum, maximum=maximum))
             continue
 
         if maximum is not None and value > maximum:
-            output_fn(f"{minimum}부터 {maximum} 사이의 숫자를 입력해주세요.")
+            output_fn(RANGE_MESSAGE_TEMPLATE.format(minimum=minimum, maximum=maximum))
             continue
 
         return value

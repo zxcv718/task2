@@ -5,7 +5,22 @@ from dataclasses import dataclass
 from typing import Callable
 
 from console_io import InputFn, OutputFn, SafeExitRequest, prompt_int, prompt_text
-from game_constants import BASE_POINTS, HINT_POINTS
+from game_constants import (
+    ANSWER_INPUT_PROMPT,
+    ANSWER_OR_HINT_ONLY_MESSAGE,
+    ANSWER_RANGE_OR_HINT_MESSAGE,
+    BASE_POINTS,
+    CORRECT_ANSWER_MESSAGE_TEMPLATE,
+    HINT_ALREADY_USED_MESSAGE,
+    HINT_COMMAND,
+    HINT_MESSAGE_TEMPLATE,
+    HINT_POINTS,
+    QUESTION_COUNT_PROMPT_TEMPLATE,
+    QUESTION_PROGRESS_TEMPLATE,
+    QUIZ_START_MESSAGE_TEMPLATE,
+    SECTION_DIVIDER,
+    WRONG_ANSWER_MESSAGE_TEMPLATE,
+)
 from quiz import Quiz
 
 
@@ -41,7 +56,7 @@ class QuizSessionRunner:
         selected_count = prompt_int(
             self.input_fn,
             self.output_fn,
-            f"몇 문제를 풀까요? (1-{len(quizzes)}): ",
+            QUESTION_COUNT_PROMPT_TEMPLATE.format(quiz_count=len(quizzes)),
             minimum=1,
             maximum=len(quizzes),
         )
@@ -53,13 +68,18 @@ class QuizSessionRunner:
         hint_used_count = 0
 
         self.output_fn("")
-        self.output_fn(f"총 {selected_count}문제를 시작합니다.")
+        self.output_fn(QUIZ_START_MESSAGE_TEMPLATE.format(selected_count=selected_count))
 
         try:
             for question_index, quiz in enumerate(selected_quizzes, start=1):
                 self.output_fn("")
-                self.output_fn("-" * 40)
-                self.output_fn(f"문제 {question_index}/{selected_count}")
+                self.output_fn(SECTION_DIVIDER)
+                self.output_fn(
+                    QUESTION_PROGRESS_TEMPLATE.format(
+                        question_index=question_index,
+                        selected_count=selected_count,
+                    )
+                )
                 self.output_fn(quiz.display())
 
                 answer, used_hint = self._prompt_answer_for_quiz(quiz)
@@ -71,10 +91,15 @@ class QuizSessionRunner:
                     correct_count += 1
                     points = calculate_points(correct=True, hint_used=used_hint)
                     total_score += points
-                    self.output_fn(f"정답입니다! +{points}점")
+                    self.output_fn(CORRECT_ANSWER_MESSAGE_TEMPLATE.format(points=points))
                 else:
                     correct_text = quiz.choices[quiz.answer - 1]
-                    self.output_fn(f"오답입니다. 정답은 {quiz.answer}번, {correct_text}입니다.")
+                    self.output_fn(
+                        WRONG_ANSWER_MESSAGE_TEMPLATE.format(
+                            answer=quiz.answer,
+                            correct_text=correct_text,
+                        )
+                    )
         except SafeExitRequest:
             return QuizSessionResult(
                 selected_count=selected_count,
@@ -100,23 +125,23 @@ class QuizSessionRunner:
             answer_text = prompt_text(
                 self.input_fn,
                 self.output_fn,
-                "정답 입력 (1-4, 힌트는 h): ",
+                ANSWER_INPUT_PROMPT,
             ).lower()
-            if answer_text == "h":
+            if answer_text == HINT_COMMAND:
                 if hint_used:
-                    self.output_fn("이 문제에서는 이미 힌트를 사용했습니다.")
+                    self.output_fn(HINT_ALREADY_USED_MESSAGE)
                     continue
                 hint_used = True
-                self.output_fn(f"힌트: {quiz.hint}")
+                self.output_fn(HINT_MESSAGE_TEMPLATE.format(hint=quiz.hint))
                 continue
 
             try:
                 answer = int(answer_text)
             except ValueError:
-                self.output_fn("1, 2, 3, 4 또는 h만 입력해주세요.")
+                self.output_fn(ANSWER_OR_HINT_ONLY_MESSAGE)
                 continue
 
             if 1 <= answer <= 4:
                 return answer, hint_used
 
-            self.output_fn("1부터 4까지의 숫자 또는 h를 입력해주세요.")
+            self.output_fn(ANSWER_RANGE_OR_HINT_MESSAGE)
