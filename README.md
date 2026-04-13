@@ -307,21 +307,47 @@ python3.12 main.py
 
 ## 7. 파일 구조
 
+현재 구조는 "원격 저장소에 올라가는 Python 코드"와 "실행하면서 생기는 파일"을 구분해서 보는 편이 더 이해하기 쉽습니다.
+
+### 저장소 기준 구조
+
 ```text
-. 
-|-- README.md
-|-- console_io.py
-|-- default_data.py
-|-- game_constants.py
-|-- main.py
-|-- quiz.py
-|-- quiz_catalog.py
-|-- quiz_game.py
-|-- quiz_session.py
-|-- scoreboard.py
-|-- state_store.py
-`-- state.json  (실행 시 생성)
+task2/
+├── README.md
+├── main.py
+├── quiz.py
+├── quiz_game.py
+├── quiz_session.py
+├── quiz_catalog.py
+├── state_store.py
+├── scoreboard.py
+├── console_io.py
+├── game_constants.py
+└── default_data.py
 ```
+
+### 파일 역할 한눈에 보기
+
+- `main.py`: 프로그램 시작점
+- `quiz.py`: 퀴즈 1문제를 표현하는 데이터 모델
+- `quiz_game.py`: 전체 게임 흐름 조율
+- `quiz_session.py`: 퀴즈 플레이 진행, 힌트, 채점
+- `quiz_catalog.py`: 퀴즈 추가, 목록, 삭제
+- `state_store.py`: `state.json` 읽기/쓰기와 복구
+- `scoreboard.py`: 최고 점수와 플레이 기록 관리
+- `console_io.py`: 공통 입력 검증과 안전 종료 처리
+- `game_constants.py`: 숫자 상수, 안내 문구, JSON 키 이름 관리
+- `default_data.py`: 기본 퀴즈 데이터와 초기 상태 생성
+
+### 실행 시 생성되는 파일
+
+```text
+task2/
+└── state.json
+```
+
+- `state.json`: 프로그램 실행 후 생성되는 저장 파일
+- 저장 내용: 퀴즈 목록, 다음 퀴즈 ID, 최고 점수, 플레이 히스토리
 
 ---
 
