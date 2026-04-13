@@ -7,12 +7,8 @@ from pathlib import Path
 from typing import Callable
 
 from default_data import build_default_state
+from game_constants import BASE_POINTS, HINT_POINTS, RECENT_HISTORY_LIMIT, STATE_VERSION
 from quiz import Quiz
-
-STATE_VERSION = 1
-BASE_POINTS = 10
-HINT_POINTS = 7
-RECENT_HISTORY_LIMIT = 5
 
 
 class SafeExitRequest(Exception):
