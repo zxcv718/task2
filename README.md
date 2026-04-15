@@ -140,7 +140,7 @@ python3.12 main.py
 - `score`
 - `hint_used_count`
 
-최고 점수는 `best_score`에 저장되며, `show_scores()`에서 최고 점수와 전체 플레이 횟수, 최근 5개 기록을 확인할 수 있습니다.
+최고 점수는 `best_score`에 저장되며, `show_scores()`에서 최고 점수와 전체 플레이 횟수, 전체 플레이 기록을 시간순으로 확인할 수 있습니다.
 
 ### 4-7. 기본 퀴즈 수
 
@@ -222,7 +222,7 @@ python3.12 main.py
 
 ### `game_constants.py`
 
-점수, state 버전, 최근 기록 개수 같은 숫자 상수뿐 아니라 아래 문자열 상수도 함께 관리합니다.
+점수, state 버전 같은 숫자 상수뿐 아니라 아래 문자열 상수도 함께 관리합니다.
 
 - 메뉴 문구
 - 입력 프롬프트
@@ -292,7 +292,7 @@ python3.12 main.py
   ],
   "history": [
     {
-      "played_at": "2026-04-13T20:39:03+09:00",
+      "played_at": "2026년 04월 13일 20시 39분 03초",
       "selected_count": 2,
       "answered_count": 1,
       "correct_count": 1,
