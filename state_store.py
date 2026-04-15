@@ -151,14 +151,15 @@ class StateStore:
         # 각 항목도 개별 검증을 거쳐 "신뢰 가능한 객체/기록"으로 바꾼다.
         quizzes = [Quiz.from_dict(item) for item in quizzes_raw]
         history = [HistoryEntry.from_dict(item) for item in history_raw]
+        self._resequence_quiz_ids(quizzes)
         highest_quiz_id = max((quiz.quiz_id for quiz in quizzes), default=0)
 
         return GameState(
             quizzes=quizzes,
             best_score=best_score,
             history=history,
-            # 저장 파일의 next_quiz_id가 잘못되어도 기존 최대 ID보다 작아지지 않게 보정한다.
-            next_quiz_id=max(next_quiz_id, highest_quiz_id + 1),
+            # 로드 시 퀴즈 번호를 다시 매기므로, 다음 ID도 현재 마지막 번호 다음 값으로 맞춘다.
+            next_quiz_id=highest_quiz_id + 1,
         )
 
     def _require_int(self, value: object, *, field_name: str) -> int:
@@ -166,3 +167,10 @@ class StateStore:
         if type(value) is not int:
             raise ValueError(f"{field_name}는 정수여야 합니다.")
         return value
+
+    @staticmethod
+    def _resequence_quiz_ids(quizzes: list[Quiz]) -> None:
+        """로드한 퀴즈 ID를 1부터 다시 매겨 삭제 후 생긴 빈 번호를 정리한다."""
+        quizzes.sort(key=lambda item: item.quiz_id)
+        for new_quiz_id, quiz in enumerate(quizzes, start=1):
+            quiz.quiz_id = new_quiz_id

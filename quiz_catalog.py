@@ -96,7 +96,7 @@ class QuizCatalogManager:
                 self.output_fn(f"  {index}. {choice}")
 
     def delete_quiz(self, quizzes: list[Quiz]) -> bool:
-        """사용자가 고른 퀴즈 ID를 삭제하고 성공 여부를 반환한다.
+        """사용자가 고른 퀴즈를 삭제하고, 남은 퀴즈 번호를 다시 정렬한다.
 
         삭제 성공 여부를 반환하는 이유는, 상위 객체가 "실제로 변경이 일어난
         경우에만 저장"하도록 제어하기 위해서다.
@@ -110,8 +110,8 @@ class QuizCatalogManager:
         for quiz in sorted(quizzes, key=lambda item: item.quiz_id):
             self.output_fn(f"{quiz.quiz_id}. {quiz.question}")
 
-        # ID가 중간에 비어 있을 수 있으므로, 먼저 입력 범위만 넓게 받고
-        # 실제 존재 여부는 아래에서 한 번 더 확인한다.
+        # 예전 저장 파일에는 중간 ID가 비어 있을 수 있으므로, 먼저 입력 범위만
+        # 넓게 받고 실제 존재 여부는 아래에서 한 번 더 확인한다.
         max_quiz_id = max(quiz.quiz_id for quiz in quizzes)
         while True:
             quiz_id = prompt_int(
@@ -133,5 +133,13 @@ class QuizCatalogManager:
             break
 
         quizzes.pop(target_index)
+        self._resequence_quiz_ids(quizzes)
         self.output_fn(QUIZ_DELETED_MESSAGE_TEMPLATE.format(quiz_id=quiz_id))
         return True
+
+    @staticmethod
+    def _resequence_quiz_ids(quizzes: list[Quiz]) -> None:
+        """남은 퀴즈의 번호를 1부터 다시 매겨 화면 번호와 저장 ID를 맞춘다."""
+        quizzes.sort(key=lambda item: item.quiz_id)
+        for new_quiz_id, quiz in enumerate(quizzes, start=1):
+            quiz.quiz_id = new_quiz_id

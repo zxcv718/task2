@@ -24,6 +24,8 @@ from game_constants import (
     HISTORY_NEGATIVE_VALUES_ERROR,
 )
 
+PLAYED_AT_FORMAT = "%Y년 %m월 %d일 %H시 %M분 %S초"
+
 
 @dataclass(slots=True)
 class HistoryEntry:
@@ -38,7 +40,7 @@ class HistoryEntry:
 
     def __post_init__(self) -> None:
         """생성 직후 타입과 값 범위를 검증한다."""
-        self.played_at = self._require_non_empty_string(
+        self.played_at = self._normalize_played_at(
             self.played_at,
             field_name=HISTORY_KEY_PLAYED_AT,
         )
@@ -90,7 +92,7 @@ class HistoryEntry:
     ) -> "HistoryEntry":
         """현재 시각을 포함한 새 history 엔트리를 만든다."""
         return cls(
-            played_at=datetime.now().astimezone().isoformat(timespec="seconds"),
+            played_at=cls._format_datetime(datetime.now().astimezone()),
             selected_count=selected_count,
             answered_count=answered_count,
             correct_count=correct_count,
@@ -136,4 +138,19 @@ class HistoryEntry:
         """표시용 문자열 필드가 비어 있지 않은지 확인한다."""
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field_name}는 비어 있지 않은 문자열이어야 합니다.")
-        return value
+        return value.strip()
+
+    @classmethod
+    def _normalize_played_at(cls, value: object, *, field_name: str) -> str:
+        """예전 ISO 문자열은 읽기 쉬운 형식으로 바꾸고, 그 외 문자열은 유지한다."""
+        played_at = cls._require_non_empty_string(value, field_name=field_name)
+        try:
+            parsed = datetime.fromisoformat(played_at)
+        except ValueError:
+            return played_at
+        return cls._format_datetime(parsed)
+
+    @staticmethod
+    def _format_datetime(value: datetime) -> str:
+        """플레이 시각을 콘솔과 저장 파일에서 읽기 쉬운 형식으로 만든다."""
+        return value.strftime(PLAYED_AT_FORMAT)

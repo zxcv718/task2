@@ -202,10 +202,12 @@ class QuizGame:
         성공 여부를 확인한 뒤에만 저장한다.
         """
         if self.catalog.delete_quiz(self.quizzes):
+            # 삭제 후 번호를 다시 매기므로, 다음 추가 ID도 현재 목록 끝 다음 값으로 맞춘다.
+            self.next_quiz_id = max((quiz.quiz_id for quiz in self.quizzes), default=0) + 1
             self.save_state()
 
     def show_scores(self) -> None:
-        """최고 점수와 최근 히스토리를 출력한다."""
+        """최고 점수와 누적 플레이 히스토리를 출력한다."""
         show_scores(self.output_fn, best_score=self.best_score, history=self.history)
 
     def safe_exit(self) -> None:

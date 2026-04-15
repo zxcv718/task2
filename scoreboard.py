@@ -16,10 +16,10 @@ from game_constants import (
     HINT_USED_COUNT_LABEL,
     NO_PLAY_HISTORY_MESSAGE,
     PLAY_COUNT_LABEL,
+    PLAY_HISTORY_ENTRY_TITLE_TEMPLATE,
     PLAYED_AT_LABEL,
-    RECENT_HISTORY_LIMIT,
-    RECENT_HISTORY_TITLE,
     SCORE_LABEL,
+    SECTION_DIVIDER,
     SELECTED_COUNT_LABEL,
     SUMMARY_BEST_SCORE_LABEL,
 )
@@ -32,33 +32,29 @@ def show_scores(
     best_score: int,
     history: Sequence[HistoryEntry],
 ) -> None:
-    """최고 점수와 최근 플레이 기록을 화면에 출력한다.
+    """최고 점수와 플레이 기록 전체를 화면에 출력한다.
 
-    이 함수는 저장된 기록 전체를 보여 주기보다, 최근 기록 일부만 추려서
-    콘솔 화면에서 한눈에 읽기 좋게 정리하는 역할을 한다.
+    전체 히스토리를 플레이한 순서대로 보여 주어, 가장 최근 기록이 화면의
+    마지막에 오도록 정리한다.
     """
     output_fn("")
+    output_fn(SECTION_DIVIDER)
     output_fn(f"{SUMMARY_BEST_SCORE_LABEL}: {best_score}")
     output_fn(f"{PLAY_COUNT_LABEL}: {len(history)}")
+    output_fn(SECTION_DIVIDER)
 
     if not history:
         output_fn(NO_PLAY_HISTORY_MESSAGE)
         return
 
-    output_fn(RECENT_HISTORY_TITLE)
-    # 최근 기록이 아래쪽에 쌓이므로, 화면에는 뒤에서부터 역순으로 보여 준다.
-    recent_history = list(history)[-RECENT_HISTORY_LIMIT:]
-    for entry in reversed(recent_history):
-        # 한 줄 요약 형식으로 보여 주어 콘솔 환경에서도 정보 밀도를 유지한다.
-        output_fn(
-            " | ".join(
-                [
-                    f"{PLAYED_AT_LABEL}: {entry.played_at}",
-                    f"{SELECTED_COUNT_LABEL}: {entry.selected_count}",
-                    f"{ANSWERED_COUNT_LABEL}: {entry.answered_count}",
-                    f"{CORRECT_COUNT_LABEL}: {entry.correct_count}",
-                    f"{SCORE_LABEL}: {entry.score}",
-                    f"{HINT_USED_COUNT_LABEL}: {entry.hint_used_count}",
-                ]
-            )
-        )
+    # history는 플레이가 끝날 때마다 뒤에 추가되므로, 그대로 순회하면
+    # 오래된 기록부터 최신 기록까지 시간 흐름대로 보여 줄 수 있다.
+    for entry_number, entry in enumerate(history, start=1):
+        output_fn(PLAY_HISTORY_ENTRY_TITLE_TEMPLATE.format(entry_number=entry_number))
+        output_fn(f"{PLAYED_AT_LABEL}: {entry.played_at}")
+        output_fn(f"{SELECTED_COUNT_LABEL}: {entry.selected_count}")
+        output_fn(f"{ANSWERED_COUNT_LABEL}: {entry.answered_count}")
+        output_fn(f"{CORRECT_COUNT_LABEL}: {entry.correct_count}")
+        output_fn(f"{SCORE_LABEL}: {entry.score}")
+        output_fn(f"{HINT_USED_COUNT_LABEL}: {entry.hint_used_count}")
+        output_fn(SECTION_DIVIDER)
