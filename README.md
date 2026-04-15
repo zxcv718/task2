@@ -9,7 +9,7 @@
 그래서 프로그램을 종료한 뒤 다시 실행해도 추가한 퀴즈, 최고 점수, 플레이 히스토리를 이어서 사용할 수 있습니다.
 
 최근 리팩터링으로 게임 운영에 쓰이는 숫자 상수뿐 아니라 메뉴 문구, 입력 안내 메시지, `state.json` 키 이름까지 `game_constants.py`로 모아 관리하도록 정리했습니다.  
-또한 `state_store.py`에서 `state.json`의 현재 스키마를 엄격하게 검증하고, 필수 키가 빠지거나 JSON이 손상된 경우에는 기본 데이터로 복구하도록 구성했습니다.
+또한 `state_store.py`에서 `state.json`의 현재 스키마를 엄격하게 검증하고, 필수 키가 빠지거나 값 타입이 다르거나 JSON이 손상된 경우에는 전체 state를 기본 데이터로 복구하도록 구성했습니다.
 
 ---
 
@@ -23,7 +23,7 @@
 - 문제를 직접 추가하면서도 주제를 확장하기 쉽습니다.
 - 초심자 기준으로도 정답 여부를 이해하기 쉬운 객관식 문제를 만들기 좋습니다.
 
-기본 퀴즈는 `default_data.py`의 `DEFAULT_QUIZ_DATA`에 들어 있으며, 현재 8개의 기본 문제가 준비되어 있습니다.
+기본 퀴즈는 `default_data.py`의 `DEFAULT_QUIZZES`를 바탕으로 생성되며, 현재 8개의 기본 문제가 준비되어 있습니다.
 
 ---
 
@@ -195,8 +195,8 @@ python3.12 main.py
 담당 역할:
 
 - 파일 없음 처리
-- 손상된 JSON 복구
-- 현재 스키마 기준 필수 키 검증
+- 손상된 JSON 및 잘못된 스키마 복구
+- 현재 스키마 기준 필수 키와 타입 검증
 - 퀴즈/히스토리 복원
 - `state.json` 키 상수 기반 저장/복원
 
@@ -218,7 +218,7 @@ python3.12 main.py
 
 ### `scoreboard.py`
 
-최고 점수와 히스토리 기록, 점수판 출력을 담당합니다.
+최고 점수와 히스토리 표시를 담당합니다.
 
 ### `game_constants.py`
 
@@ -259,7 +259,7 @@ python3.12 main.py
 
 - 파일이 있으면 JSON을 읽어 메모리에 반영합니다.
 - 파일이 없으면 기본 퀴즈 데이터로 새 파일을 만듭니다.
-- 파일이 손상되었거나 필수 키가 빠진 잘못된 스키마면 안내 메시지를 출력한 뒤 기본 데이터로 복구합니다.
+- 파일이 손상되었거나 필수 키가 빠졌거나 타입/값 규칙이 맞지 않는 잘못된 스키마면 안내 메시지를 출력한 뒤 전체 state를 기본 데이터로 복구합니다.
 
 ### 쓰기 흐름
 
@@ -272,7 +272,7 @@ python3.12 main.py
 - 프로그램 종료 시
 
 현재 구현에서는 `version`, `next_quiz_id`, `best_score`, `quizzes`, `history` 같은 키 이름도 `game_constants.py`의 상수를 통해 일관되게 관리합니다.  
-`history` 항목은 `played_at`, `selected_count`, `answered_count`, `correct_count`, `score`, `hint_used_count`를 모두 갖춘 현재 스키마만 정상 기록으로 취급합니다.
+`history` 항목은 `played_at`, `selected_count`, `answered_count`, `correct_count`, `score`, `hint_used_count`를 모두 갖춘 현재 스키마만 정상 기록으로 취급하며, 숫자 문자열·`bool`·`float` 같은 암묵적 형변환 입력은 허용하지 않습니다.
 
 ### 현재 스키마
 
@@ -304,7 +304,7 @@ python3.12 main.py
 ```
 
 `answered_count`는 최종적으로 유효한 답 입력까지 완료된 문제 수를 뜻합니다.  
-현재 코드는 `history`를 예전 형식까지 확장 해석하지 않고, 위 구조 그대로 검증해서 읽습니다.
+현재 코드는 `history`를 예전 형식까지 확장 해석하지 않고, 위 구조 그대로 엄격하게 검증해서 읽습니다. 숫자 문자열이나 `bool`처럼 자동 변환될 수 있는 값도 정상 데이터로 받아들이지 않습니다.
 
 ---
 
@@ -337,7 +337,7 @@ task2/
 - `quiz_session.py`: 퀴즈 플레이 진행, 힌트, 채점
 - `quiz_catalog.py`: 퀴즈 추가, 목록, 삭제
 - `state_store.py`: `state.json` 읽기/쓰기, 스키마 검증, 복구
-- `scoreboard.py`: 최고 점수와 플레이 기록 관리
+- `scoreboard.py`: 최고 점수와 플레이 기록 출력
 - `console_io.py`: 공통 입력 검증과 안전 종료 처리
 - `game_constants.py`: 숫자 상수, 안내 문구, JSON 키 이름 관리
 - `default_data.py`: 기본 퀴즈 데이터와 초기 상태 생성
