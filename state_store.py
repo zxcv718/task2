@@ -16,18 +16,7 @@ from console_io import OutputFn
 from default_data import build_default_state
 from game_constants import (
     BEST_SCORE_NEGATIVE_ERROR,
-    HISTORY_ANSWERED_GT_SELECTED_ERROR,
-    HISTORY_CORRECT_GT_ANSWERED_ERROR,
-    HISTORY_ENTRY_DICT_ERROR,
-    HISTORY_HINT_GT_ANSWERED_ERROR,
-    HISTORY_KEY_ANSWERED_COUNT,
-    HISTORY_KEY_CORRECT_COUNT,
-    HISTORY_KEY_HINT_USED_COUNT,
-    HISTORY_KEY_PLAYED_AT,
-    HISTORY_KEY_SCORE,
-    HISTORY_KEY_SELECTED_COUNT,
     HISTORY_LIST_ERROR,
-    HISTORY_NEGATIVE_VALUES_ERROR,
     NEXT_QUIZ_ID_MIN_ERROR,
     QUIZZES_LIST_ERROR,
     STATE_DATA_DICT_ERROR,
@@ -42,6 +31,7 @@ from game_constants import (
     STATE_VERSION,
     UNSUPPORTED_STATE_VERSION_ERROR_TEMPLATE,
 )
+from history_entry import HistoryEntry
 from quiz import Quiz
 
 
@@ -55,7 +45,7 @@ class GameState:
 
     quizzes: list[Quiz]
     best_score: int
-    history: list[dict[str, object]]
+    history: list[HistoryEntry]
     next_quiz_id: int
 
 
@@ -107,7 +97,7 @@ class StateStore:
             STATE_KEY_NEXT_QUIZ_ID: state.next_quiz_id,
             STATE_KEY_BEST_SCORE: state.best_score,
             STATE_KEY_QUIZZES: [quiz.to_dict() for quiz in state.quizzes],
-            STATE_KEY_HISTORY: list(state.history),
+            STATE_KEY_HISTORY: [entry.to_dict() for entry in state.history],
         }
 
         try:
@@ -125,7 +115,7 @@ class StateStore:
 
         return True
 
-    def _parse_state(self, data: dict[str, object]) -> GameState:
+    def _parse_state(self, data: object) -> GameState:
         """읽어 온 payload를 검증하고 `GameState`로 변환한다.
 
         이 단계는 "JSON으로 읽을 수 있음"과 "우리 프로그램이 이해할 수 있는
@@ -134,15 +124,18 @@ class StateStore:
         if not isinstance(data, dict):
             raise ValueError(STATE_DATA_DICT_ERROR)
 
-        version = int(data[STATE_KEY_VERSION])
+        version = self._require_int(data[STATE_KEY_VERSION], field_name=STATE_KEY_VERSION)
         # 저장 포맷 버전이 다르면 키 구조나 의미가 달라졌을 수 있으므로 거부한다.
         if version != STATE_VERSION:
             raise ValueError(UNSUPPORTED_STATE_VERSION_ERROR_TEMPLATE.format(version=version))
 
         quizzes_raw = data[STATE_KEY_QUIZZES]
-        best_score = int(data[STATE_KEY_BEST_SCORE])
+        best_score = self._require_int(data[STATE_KEY_BEST_SCORE], field_name=STATE_KEY_BEST_SCORE)
         history_raw = data[STATE_KEY_HISTORY]
-        next_quiz_id = int(data[STATE_KEY_NEXT_QUIZ_ID])
+        next_quiz_id = self._require_int(
+            data[STATE_KEY_NEXT_QUIZ_ID],
+            field_name=STATE_KEY_NEXT_QUIZ_ID,
+        )
 
         # 기본적인 수치 조건과 컨테이너 타입을 먼저 검사해 이후 변환 로직의
         # 전제를 안전하게 만든다.
@@ -157,7 +150,7 @@ class StateStore:
 
         # 각 항목도 개별 검증을 거쳐 "신뢰 가능한 객체/기록"으로 바꾼다.
         quizzes = [Quiz.from_dict(item) for item in quizzes_raw]
-        history = [self._validate_history_entry(item) for item in history_raw]
+        history = [HistoryEntry.from_dict(item) for item in history_raw]
         highest_quiz_id = max((quiz.quiz_id for quiz in quizzes), default=0)
 
         return GameState(
@@ -168,46 +161,8 @@ class StateStore:
             next_quiz_id=max(next_quiz_id, highest_quiz_id + 1),
         )
 
-    def _validate_history_entry(self, entry: dict[str, object]) -> dict[str, object]:
-        """history 항목 1개의 형식과 값 범위를 검사한다.
-
-        history는 점수 화면에 그대로 노출되는 정보이므로, 값 범위가 어긋나거나
-        논리적으로 모순된 데이터가 섞이지 않도록 여기서 걸러 낸다.
-        """
-        if not isinstance(entry, dict):
-            raise ValueError(HISTORY_ENTRY_DICT_ERROR)
-
-        # 최신 history 스키마의 필수 키가 모두 있어야 정상 기록으로 본다.
-        played_at = str(entry[HISTORY_KEY_PLAYED_AT])
-        selected_count = int(entry[HISTORY_KEY_SELECTED_COUNT])
-        answered_count = int(entry[HISTORY_KEY_ANSWERED_COUNT])
-        correct_count = int(entry[HISTORY_KEY_CORRECT_COUNT])
-        score = int(entry[HISTORY_KEY_SCORE])
-        hint_used_count = int(entry[HISTORY_KEY_HINT_USED_COUNT])
-
-        # 음수 값이나 "맞힌 문제 수가 푼 문제 수보다 많은" 경우처럼 말이 안 되는
-        # 기록은 손상된 데이터로 보고 거부한다.
-        if (
-            selected_count < 0
-            or answered_count < 0
-            or correct_count < 0
-            or score < 0
-            or hint_used_count < 0
-        ):
-            raise ValueError(HISTORY_NEGATIVE_VALUES_ERROR)
-        if answered_count > selected_count:
-            raise ValueError(HISTORY_ANSWERED_GT_SELECTED_ERROR)
-        if correct_count > answered_count:
-            raise ValueError(HISTORY_CORRECT_GT_ANSWERED_ERROR)
-        if hint_used_count > answered_count:
-            raise ValueError(HISTORY_HINT_GT_ANSWERED_ERROR)
-
-        # 검증을 통과한 뒤에는 현재 코드가 기대하는 최신 키 구조로 다시 정규화한다.
-        return {
-            HISTORY_KEY_PLAYED_AT: played_at,
-            HISTORY_KEY_SELECTED_COUNT: selected_count,
-            HISTORY_KEY_ANSWERED_COUNT: answered_count,
-            HISTORY_KEY_CORRECT_COUNT: correct_count,
-            HISTORY_KEY_SCORE: score,
-            HISTORY_KEY_HINT_USED_COUNT: hint_used_count,
-        }
+    def _require_int(self, value: object, *, field_name: str) -> int:
+        """bool/float/문자열 숫자를 배제한 "진짜 int"만 허용한다."""
+        if type(value) is not int:
+            raise ValueError(f"{field_name}는 정수여야 합니다.")
+        return value

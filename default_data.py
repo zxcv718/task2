@@ -20,75 +20,79 @@ from quiz import Quiz
 
 # 프로젝트 기본 제공 문제집.
 # 사용자가 저장 파일 없이 시작해도 바로 게임을 해 볼 수 있도록 최소 문제 세트를 제공한다.
-# 딕셔너리 형태로 두는 이유는, 이후 `Quiz.from_dict()`를 거치며 저장 파일과
-# 동일한 복원 경로를 재사용하기 위해서다.
-DEFAULT_QUIZ_DATA: list[dict[str, object]] = [
-    {
-        "id": 1,
-        "question": "컴퓨터의 두뇌라고 자주 불리는 부품은 무엇일까요?",
-        "choices": ["RAM", "CPU", "SSD", "GPU"],
-        "answer": 2,
-        "hint": "명령을 실행하고 계산을 수행하는 부품입니다.",
-    },
-    {
-        "id": 2,
-        "question": "원격 저장소의 새 변경 사항을 내려받아 현재 브랜치에 병합하는 명령어는 무엇일까요?",
-        "choices": ["git clone", "git commit", "git pull", "git add"],
-        "answer": 3,
-        "hint": "가져오기와 병합을 한 번에 수행하는 명령어입니다.",
-    },
-    {
-        "id": 3,
-        "question": "RAM은 실행 중인 프로그램에 주로 무엇을 제공할까요?",
-        "choices": ["임시 작업 메모리", "영구 백업 저장소", "네트워크 접속", "프린터 제어"],
-        "answer": 1,
-        "hint": "전원이 꺼지면 보통 내용이 사라집니다.",
-    },
-    {
-        "id": 4,
-        "question": "파이썬에서 순서가 있고 수정 가능한 여러 항목을 저장하는 자료형은 무엇일까요?",
-        "choices": ["튜플", "리스트", "딕셔너리", "집합"],
-        "answer": 2,
-        "hint": "[1, 2, 3]처럼 대괄호를 사용합니다.",
-    },
-    {
-        "id": 5,
-        "question": "브라우저에서 웹 페이지를 불러올 때 흔히 사용하는 프로토콜은 무엇일까요?",
-        "choices": ["FTP", "SSH", "HTTP", "SMTP"],
-        "answer": 3,
-        "hint": "웹사이트 주소에서 보안 버전인 HTTPS를 자주 볼 수 있습니다.",
-    },
-    {
-        "id": 6,
-        "question": "인터넷에서 DNS는 어떤 역할을 할까요?",
-        "choices": ["배터리를 충전한다", "이름을 IP 주소로 변환한다", "이미지를 압축한다", "코드를 수정한다"],
-        "answer": 2,
-        "hint": "브라우저가 도메인 이름에 해당하는 서버를 찾도록 도와줍니다.",
-    },
-    {
-        "id": 7,
-        "question": "새 브랜치를 만들고 바로 그 브랜치로 이동하는 Git 명령어는 무엇일까요?",
-        "choices": ["git status", "git branch main", "git switch -c feature", "git merge feature"],
-        "answer": 3,
-        "hint": "최근 방식의 명령어는 switch로 시작합니다.",
-    },
-    {
-        "id": 8,
-        "question": "파이썬에서 len('python')의 결과는 무엇일까요?",
-        "choices": ["5", "6", "7", "8"],
-        "answer": 2,
-        "hint": "단어를 이루는 글자 수를 세어 보세요.",
-    },
-]
+# 외부에는 직접 노출하지 않고, `get_default_quizzes()`에서 매번 복사본을 만들어 반환한다.
+DEFAULT_QUIZZES: tuple[Quiz, ...] = (
+    Quiz(
+        quiz_id=1,
+        question="컴퓨터의 두뇌라고 자주 불리는 부품은 무엇일까요?",
+        choices=["RAM", "CPU", "SSD", "GPU"],
+        answer=2,
+        hint="명령을 실행하고 계산을 수행하는 부품입니다.",
+    ),
+    Quiz(
+        quiz_id=2,
+        question="원격 저장소의 새 변경 사항을 내려받아 현재 브랜치에 병합하는 명령어는 무엇일까요?",
+        choices=["git clone", "git commit", "git pull", "git add"],
+        answer=3,
+        hint="가져오기와 병합을 한 번에 수행하는 명령어입니다.",
+    ),
+    Quiz(
+        quiz_id=3,
+        question="RAM은 실행 중인 프로그램에 주로 무엇을 제공할까요?",
+        choices=["임시 작업 메모리", "영구 백업 저장소", "네트워크 접속", "프린터 제어"],
+        answer=1,
+        hint="전원이 꺼지면 보통 내용이 사라집니다.",
+    ),
+    Quiz(
+        quiz_id=4,
+        question="파이썬에서 순서가 있고 수정 가능한 여러 항목을 저장하는 자료형은 무엇일까요?",
+        choices=["튜플", "리스트", "딕셔너리", "집합"],
+        answer=2,
+        hint="[1, 2, 3]처럼 대괄호를 사용합니다.",
+    ),
+    Quiz(
+        quiz_id=5,
+        question="브라우저에서 웹 페이지를 불러올 때 흔히 사용하는 프로토콜은 무엇일까요?",
+        choices=["FTP", "SSH", "HTTP", "SMTP"],
+        answer=3,
+        hint="웹사이트 주소에서 보안 버전인 HTTPS를 자주 볼 수 있습니다.",
+    ),
+    Quiz(
+        quiz_id=6,
+        question="인터넷에서 DNS는 어떤 역할을 할까요?",
+        choices=["배터리를 충전한다", "이름을 IP 주소로 변환한다", "이미지를 압축한다", "코드를 수정한다"],
+        answer=2,
+        hint="브라우저가 도메인 이름에 해당하는 서버를 찾도록 도와줍니다.",
+    ),
+    Quiz(
+        quiz_id=7,
+        question="새 브랜치를 만들고 바로 그 브랜치로 이동하는 Git 명령어는 무엇일까요?",
+        choices=["git status", "git branch main", "git switch -c feature", "git merge feature"],
+        answer=3,
+        hint="최근 방식의 명령어는 switch로 시작합니다.",
+    ),
+    Quiz(
+        quiz_id=8,
+        question="파이썬에서 len('python')의 결과는 무엇일까요?",
+        choices=["5", "6", "7", "8"],
+        answer=2,
+        hint="단어를 이루는 글자 수를 세어 보세요.",
+    ),
+)
 
 
 def get_default_quizzes() -> list[Quiz]:
-    """기본 퀴즈 payload를 `Quiz` 객체 목록으로 변환한다.
-
-    기본 데이터라고 해서 예외 없이 신뢰하지 않고, 실제 저장 파일을 읽을 때와
-    같은 방식으로 `Quiz.from_dict()` 검증을 거쳐 객체를 만든다.
-    """
-    return [Quiz.from_dict(item) for item in DEFAULT_QUIZ_DATA]
+    """기본 퀴즈 seed를 새 `Quiz` 객체 목록으로 복사해 반환한다."""
+    return [
+        Quiz(
+            quiz_id=quiz.quiz_id,
+            question=quiz.question,
+            choices=list(quiz.choices),
+            answer=quiz.answer,
+            hint=quiz.hint,
+        )
+        for quiz in DEFAULT_QUIZZES
+    ]
 
 
 def build_default_state() -> dict[str, object]:
@@ -99,10 +103,11 @@ def build_default_state() -> dict[str, object]:
     """
     quizzes = get_default_quizzes()
     # `next_quiz_id`는 현재 존재하는 가장 큰 ID 다음 값이어야 하므로,
-    # 기본 문제 수에 1을 더한 값으로 시작한다.
+    # 기본 문제 ID가 비연속이더라도 최대 ID 기준으로 계산한다.
+    highest_quiz_id = max((quiz.quiz_id for quiz in quizzes), default=0)
     return {
         STATE_KEY_VERSION: STATE_VERSION,
-        STATE_KEY_NEXT_QUIZ_ID: len(quizzes) + 1,
+        STATE_KEY_NEXT_QUIZ_ID: highest_quiz_id + 1,
         STATE_KEY_BEST_SCORE: 0,
         STATE_KEY_QUIZZES: [quiz.to_dict() for quiz in quizzes],
         STATE_KEY_HISTORY: [],

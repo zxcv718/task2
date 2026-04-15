@@ -121,25 +121,17 @@ class QuizCatalogManager:
                 minimum=1,
                 maximum=max_quiz_id,
             )
-            target = self._find_quiz(quizzes, quiz_id)
-            if target is None:
+            target_index = None
+            for index, quiz in enumerate(quizzes):
+                if quiz.quiz_id == quiz_id:
+                    target_index = index
+                    break
+
+            if target_index is None:
                 self.output_fn(QUIZ_ID_NOT_FOUND_MESSAGE)
                 continue
             break
 
-        # 리스트 객체 자체를 바꾸지 않고 내부 원소만 교체하면,
-        # 바깥에서 같은 리스트 참조를 계속 써도 일관성이 유지된다.
-        quizzes[:] = [quiz for quiz in quizzes if quiz.quiz_id != quiz_id]
+        quizzes.pop(target_index)
         self.output_fn(QUIZ_DELETED_MESSAGE_TEMPLATE.format(quiz_id=quiz_id))
         return True
-
-    def _find_quiz(self, quizzes: list[Quiz], quiz_id: int) -> Quiz | None:
-        """주어진 ID에 해당하는 퀴즈를 찾고, 없으면 `None`을 반환한다.
-
-        별도 헬퍼로 빼 두면 삭제 로직의 본문은 "입력 -> 확인 -> 삭제"라는
-        큰 흐름에 집중할 수 있다.
-        """
-        for quiz in quizzes:
-            if quiz.quiz_id == quiz_id:
-                return quiz
-        return None

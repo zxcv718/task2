@@ -34,7 +34,7 @@ class Quiz:
         흐름에서 별도의 방어 코드를 반복해서 쓰지 않아도 된다.
         """
         # 퀴즈 ID는 저장 파일과 삭제 기능에서 식별자로 쓰이므로 1 이상의 정수만 허용한다.
-        if not isinstance(self.quiz_id, int) or self.quiz_id < 1:
+        if type(self.quiz_id) is not int or self.quiz_id < 1:
             raise ValueError("quiz_id must be a positive integer.")
 
         # 문제 문장은 화면에 출력되므로 비어 있거나 공백뿐인 값이면 안 된다.
@@ -53,7 +53,7 @@ class Quiz:
             cleaned_choices.append(choice.strip())
 
         # 정답 번호는 사람이 보는 번호 체계와 맞추기 위해 1~4 범위로 유지한다.
-        if not isinstance(self.answer, int) or not 1 <= self.answer <= 4:
+        if type(self.answer) is not int or not 1 <= self.answer <= 4:
             raise ValueError("answer must be an integer from 1 to 4.")
 
         # 힌트 역시 실제 플레이 중 그대로 노출되므로 비어 있지 않아야 한다.
@@ -118,13 +118,13 @@ class Quiz:
 
         # 여기서는 "대략적인 타입"만 먼저 확인하고, 더 세부적인 규칙은
         # 생성자와 __post_init__에 맡겨 검증 책임을 한 번 더 모은다.
-        if not isinstance(quiz_id, int):
+        if type(quiz_id) is not int:
             raise ValueError("Quiz id must be an integer.")
         if not isinstance(question, str):
             raise ValueError("Quiz question must be a string.")
         if not isinstance(choices, list):
             raise ValueError("Quiz choices must be a list.")
-        if not isinstance(answer, int):
+        if type(answer) is not int:
             raise ValueError("Quiz answer must be an integer.")
         if not isinstance(hint, str):
             raise ValueError("Quiz hint must be a string.")
